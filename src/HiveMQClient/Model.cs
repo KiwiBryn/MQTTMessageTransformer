@@ -11,24 +11,25 @@ namespace devMobile.IoT.NanoMqtt.Model
 		public TimeSpan PublicationTimerDue { get; set; }
 		public TimeSpan PublicationTimerPeriod { get; set; }
 
-      public string ClientId { get; set; }
-      public string Host{ get; set; }
+      public required string ClientId { get; set; }
+      public required string Host{ get; set; }
       public int Port { get; set; }
 		public bool CleanStart { get; set; }
+      public bool UseTls { get; set; }
 
-      public string PublishTopic { get; set; }
+      public required string PublishTopics { get; set; }
       public QualityOfService PublishQualityOfService { get; set; }
-      public string PublishContentType { get; set; }
+      public required string PublishContentType { get; set; }
 
-      public string SubscribeTopics { get; set; }
+      public required string SubscribeTopics { get; set; }
       public QualityOfService SubscribeQualityOfService { get; set; }
 
-      public string UserName { get; set; }
+      public required string UserName { get; set; }
       
-      public string Password { get; set; }
+      public required string Password { get; set; }
 
-      public string ClientCertificateFileName { get; set; }
+      public required string ClientCertificateFileName { get; set; }
 
-      public string ClientCertificatePassword { get; set; }
+      public required string ClientCertificatePassword { get; set; }
    }
 }

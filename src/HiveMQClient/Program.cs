@@ -43,7 +43,7 @@ class Program
             .WithPort(_applicationSettings.Port)
             .WithUserName(_applicationSettings.UserName)
             .WithCleanStart(_applicationSettings.CleanStart)
-            .WithUseTls(true);
+            .WithUseTls(_applicationSettings.UseTls);
 
          if (!string.IsNullOrWhiteSpace(_applicationSettings.ClientCertificateFileName))
          {
@@ -65,12 +65,14 @@ class Program
                throw new Exception($"Failed to connect: {connectResult.ReasonCode}");
             }
 
-            Console.WriteLine($"Subscribed to Topic");
+            Console.WriteLine($"Subscribing to Topic(s)");
             foreach (string topic in _applicationSettings.SubscribeTopics.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-               var subscribeResult = await _client.SubscribeAsync(topic, _applicationSettings.SubscribeQualityOfService);
+               string topicFormatted = string.Format(topic, _applicationSettings.ClientId);
 
-               Console.WriteLine($" Topic:{topic} Result:{subscribeResult.Subscriptions[0].SubscribeReasonCode}");
+               var subscribeResult = await _client.SubscribeAsync(topicFormatted, _applicationSettings.SubscribeQualityOfService);
+
+               Console.WriteLine($" Topic:{topicFormatted} Result:{subscribeResult.Subscriptions[0].SubscribeReasonCode}");
             }
 
             Console.WriteLine($"Timer Due:{_applicationSettings.PublicationTimerDue} Period:{_applicationSettings.PublicationTimerPeriod}");
@@ -110,28 +112,34 @@ class Program
       }
       _publisherBusy = true;
 
+      var payload = JsonSerializer.Serialize(new
+      {
+         Content = $"{DateTime.UtcNow:yy-MM-dd HH:mm:ss}",
+      });
+
       try
       {
-         var payload = JsonSerializer.Serialize(new
+         Console.WriteLine($"Publishing to Topic(s)");
+         foreach (string topic in _applicationSettings.PublishTopics.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
          {
-            Content = $"{DateTime.UtcNow:yy-MM-dd HH:mm:ss}",
-         });
+            string topicFormatted = string.Format(topic, _applicationSettings.ClientId);
 
-         var message = new MQTT5PublishMessage
-         {
-            Topic = string.Format(_applicationSettings.PublishTopic, _applicationSettings.UserName),
-            Payload = Encoding.ASCII.GetBytes(payload),
-            ContentType = _applicationSettings.PublishContentType,
-            QoS = _applicationSettings.PublishQualityOfService,
-         };
+            var message = new MQTT5PublishMessage
+            {
+               Topic = topicFormatted,
+               Payload = Encoding.ASCII.GetBytes(payload),
+               ContentType = _applicationSettings.PublishContentType,
+               QoS = _applicationSettings.PublishQualityOfService,
+            };
 
-         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.Publish start");
+            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.Publish start");
 
-         var resultPublish = await _client.PublishAsync(message);
+            var resultPublish = await _client.PublishAsync(message);
 
-         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.Publish finish");
+            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.Publish finish");
 
-         Console.WriteLine($" Topic:{message.Topic} Reason:{resultPublish.QoS1ReasonCode}{resultPublish.QoS2ReasonCode}");
+            Console.WriteLine($" Topic:{message.Topic} Reason:{resultPublish.QoS1ReasonCode}{resultPublish.QoS2ReasonCode}");
+         }
       }
       catch (Exception ex)
       {
@@ -150,3 +158,32 @@ class Program
       Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.receive finish");
    }
 }
+
+/*
+    optionsBuilder.WithClientCertificate(_applicationSettings.ClientCertificateFileName, _applicationSettings.ClientCertificatePassword);
+   /*
+   SecureString password = new SecureString();
+   foreach (char c in _applicationSettings.ClientCertificatePassword)
+   {
+      password.AppendChar(c);
+   }
+   password.MakeReadOnly();
+
+   optionsBuilder.WithClientCertificate(_applicationSettings.ClientCertificateFileName, password);
+
+}
+
+//if (!string.IsNullOrWhiteSpace(_applicationSettings.Password))
+if (_applicationSettings.Password.Length > 0)
+{
+   optionsBuilder = optionsBuilder.WithPassword(_applicationSettings.Password);
+   /*
+   SecureString password = new SecureString();
+   foreach (char c in _applicationSettings.Password)
+   {
+      password.AppendChar(c);
+   }
+   password.MakeReadOnly();
+
+   optionsBuilder = optionsBuilder.WithPassword(password);
+   */
