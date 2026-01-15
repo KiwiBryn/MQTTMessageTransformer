@@ -160,8 +160,9 @@ class Program
 }
 
 /*
-    optionsBuilder.WithClientCertificate(_applicationSettings.ClientCertificateFileName, _applicationSettings.ClientCertificatePassword);
-   /*
+   Don't like the new approach... SecureString not recomended anymore
+   optionsBuilder.WithClientCertificate(_applicationSettings.ClientCertificateFileName, _applicationSettings.ClientCertificatePassword);
+
    SecureString password = new SecureString();
    foreach (char c in _applicationSettings.ClientCertificatePassword)
    {
@@ -177,7 +178,7 @@ class Program
 if (_applicationSettings.Password.Length > 0)
 {
    optionsBuilder = optionsBuilder.WithPassword(_applicationSettings.Password);
-   /*
+
    SecureString password = new SecureString();
    foreach (char c in _applicationSettings.Password)
    {
@@ -186,4 +187,4 @@ if (_applicationSettings.Password.Length > 0)
    password.MakeReadOnly();
 
    optionsBuilder = optionsBuilder.WithPassword(password);
-   */
+*/
