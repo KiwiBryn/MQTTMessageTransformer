@@ -9,7 +9,8 @@ using HiveMQtt.Client;
 using HiveMQtt.MQTT5.ReasonCodes;
 using HiveMQtt.MQTT5.Types;
 
-namespace devMobile.IoT.NanoMqtt;
+namespace devMobile.IoT.MqttTransformer.Client;
+
 
 class Program
 {
