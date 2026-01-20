@@ -4,7 +4,7 @@
 using HiveMQtt.MQTT5.Types;
 
 
-namespace devMobile.IoT.NanoMqtt.Model
+namespace devMobile.IoT.MqttTransformer.Client.Model
 {
 	internal class ApplicationSettings
 	{
