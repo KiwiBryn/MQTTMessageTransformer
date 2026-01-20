@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="HiveMQClient/HiveMQClient.csproj" Id="3bc6b9e5-31c1-4a85-9abf-9ee614a1922b" />
+  <Project Path="MQTTCLientCodeLoopback/MQTTCLientCodeLoopback.csproj" Id="631e6dcd-a635-4d0e-a6ea-302f56f1f704" />
 </Solution>
