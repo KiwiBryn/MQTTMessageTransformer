@@ -5,18 +5,25 @@
 //
 // https://github.com/hivemq/hivemq-mqtt-client-dotnet 
 //
+using CSScriptLib;
+
 using HiveMQtt.Client;
 using HiveMQtt.MQTT5.ReasonCodes;
 using HiveMQtt.MQTT5.Types;
-using Microsoft.Extensions.Configuration;
 
 
 namespace devMobile.IoT.MqttTransformer.CSScriptLoopback;
+
+public interface IMessageTransformer
+{
+   public MQTT5PublishMessage[] Transform(MQTT5PublishMessage mqttPublishMessage);
+}
 
 
 class Program
 {
    private static Model.ApplicationSettings _applicationSettings;
+   private static IMessageTransformer _evaluator;
 
    static async Task Main()
    {
@@ -37,6 +44,8 @@ class Program
          {
             throw new Exception("ApplicationSettings not configured");
          }
+
+         _evaluator = CSScript.Evaluator.LoadCode<IMessageTransformer>(sampleTransformCode);
 
          var optionsBuilder = new HiveMQClientOptionsBuilder();
 
@@ -114,15 +123,45 @@ class Program
       {
          e.PublishMessage.Topic = string.Format(topic, _applicationSettings.ClientId);
 
-         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Topic:{e.PublishMessage.Topic} HiveMQ Publish start ");
-         var resultPublish = client.PublishAsync(e.PublishMessage).GetAwaiter().GetResult();
-         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Published:{resultPublish.QoS1ReasonCode} {resultPublish.QoS2ReasonCode}");
+         foreach (MQTT5PublishMessage message in _evaluator.Transform(e.PublishMessage))
+         {
+            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Topic:{e.PublishMessage.Topic} HiveMQ Publish start ");
+            var resultPublish = client.PublishAsync(message).GetAwaiter().GetResult();
+            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Published:{resultPublish.QoS1ReasonCode} {resultPublish.QoS2ReasonCode}");
+         }
       }
       Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.Receive finish");
    }
+
+   // This code is compiled as the application starts up, it implements the IMessageTransformer interface
+   const string sampleTransformCode = @"
+      using System.Text;
+      using HiveMQtt.MQTT5.Types;
+
+      public class messageTransformer : devMobile.IoT.MqttTransformer.CSScriptLoopback.IMessageTransformer
+      {
+         public MQTT5PublishMessage[] Transform(MQTT5PublishMessage message)
+         {
+            // Example: echo the payload to a new topic
+            var payload = Encoding.UTF8.GetString(message.Payload);
+
+
+            // Simple transformations: convert to uppercase or lowercase
+            var toLower = new MQTT5PublishMessage
+            {
+               Topic = message.Topic,
+               Payload = Encoding.UTF8.GetBytes(payload.ToLower()),
+               QoS = QualityOfService.AtLeastOnceDelivery
+            };
+
+            var toUpper = new MQTT5PublishMessage
+            {
+               Topic = message.Topic,
+               Payload = Encoding.UTF8.GetBytes(payload.ToUpper()),
+               QoS = QualityOfService.AtLeastOnceDelivery
+            };
+
+            return new[] { toLower, toUpper };
+         }
+      }";
 }
-
-
-
-
-
