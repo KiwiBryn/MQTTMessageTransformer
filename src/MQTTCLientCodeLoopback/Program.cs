@@ -16,12 +16,12 @@ namespace devMobile.IoT.MqttTransformer.CodeLoopback;
 class Program
 {
    private static Model.ApplicationSettings _applicationSettings;
-   private static HiveMQClient _client;
-   private static bool _publisherBusy = false;
 
    static async Task Main()
    {
-      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Hive MQ client starting");
+      HiveMQClient _client;
+
+      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Hive MQ client coode lookback starting");
 
       try
       {
@@ -72,16 +72,13 @@ class Program
             {
                string topicFormatted = string.Format(topic, _applicationSettings.ClientId);
 
+               SubscribeOptionsBuilder subscribeOptionsBuilder = new SubscribeOptionsBuilder();
+               TopicFilter[] topicFilter = [new TopicFilter(topicFormatted, _applicationSettings.SubscribeQualityOfService)];
+               subscribeOptionsBuilder.WithSubscriptions(topicFilter);
                var subscribeResult = await _client.SubscribeAsync(topicFormatted, _applicationSettings.SubscribeQualityOfService);
 
                Console.WriteLine($" Topic:{topicFormatted} Result:{subscribeResult.Subscriptions[0].SubscribeReasonCode}");
             }
-
-            Console.WriteLine($"Timer Due:{_applicationSettings.PublicationTimerDue} Period:{_applicationSettings.PublicationTimerPeriod}");
-
-            Timer imageUpdatetimer = new(PublisherTimerCallback, null, _applicationSettings.PublicationTimerDue, _applicationSettings.PublicationTimerPeriod);
-
-            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} press <ctrl^c> to exit");
 
             try
             {
@@ -104,59 +101,22 @@ class Program
       Console.ReadLine();
    }
 
-
-   private static async void PublisherTimerCallback(object? state)
-   {
-      // Just incase - stop code being called while publish already in progress
-      if (_publisherBusy)
-      {
-         return;
-      }
-      _publisherBusy = true;
-
-      var payload = JsonSerializer.Serialize(new
-      {
-         Content = $"{DateTime.UtcNow:yy-MM-dd HH:mm:ss}",
-      });
-
-      try
-      {
-         Console.WriteLine($"Publishing to Topic(s)");
-         foreach (string topic in _applicationSettings.PublishTopics.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-         {
-            string topicFormatted = string.Format(topic, _applicationSettings.ClientId);
-
-            var message = new MQTT5PublishMessage
-            {
-               Topic = topicFormatted,
-               Payload = Encoding.ASCII.GetBytes(payload),
-               ContentType = _applicationSettings.PublishContentType,
-               QoS = _applicationSettings.PublishQualityOfService,
-            };
-
-            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.Publish start");
-
-            var resultPublish = await _client.PublishAsync(message);
-
-            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.Publish finish");
-
-            Console.WriteLine($" Topic:{message.Topic} Reason:{resultPublish.QoS1ReasonCode}{resultPublish.QoS2ReasonCode}");
-         }
-      }
-      catch (Exception ex)
-      {
-         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} HiveMQ.Publish failed {ex.Message}");
-      }
-      finally
-      {
-         _publisherBusy = false;
-      }
-   }
-
    private static void OnMessageReceived(object? sender, HiveMQtt.Client.Events.OnMessageReceivedEventArgs e)
    {
+      HiveMQClient client = (HiveMQClient)sender!;
+
       Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.receive start");
       Console.WriteLine($" Topic:{e.PublishMessage.Topic} QoS:{e.PublishMessage.QoS} Payload:{e.PublishMessage.PayloadAsString}");
-      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.receive finish");
+
+      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.Publish start");
+      foreach (string topic in _applicationSettings.PublishTopics.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+      {
+         e.PublishMessage.Topic = string.Format(topic, _applicationSettings.ClientId);
+
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Topic:{e.PublishMessage.Topic} HiveMQ Publish start ");
+         var resultPublish = client.PublishAsync(e.PublishMessage).GetAwaiter().GetResult();
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Published:{resultPublish.QoS1ReasonCode} {resultPublish.QoS2ReasonCode}");
+      }
+      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.Receive finish");
    }
 }
