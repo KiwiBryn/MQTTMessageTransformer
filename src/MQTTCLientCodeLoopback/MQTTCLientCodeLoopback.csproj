@@ -21,6 +21,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="HiveMQtt.Client" />
+    <Using Include="HiveMQtt.MQTT5.ReasonCodes" />
+    <Using Include="HiveMQtt.MQTT5.Types" />
     <Using Include="Microsoft.Extensions.Configuration" />
     <Using Include="System.Text" />
     <Using Include="System.Text.Json" />

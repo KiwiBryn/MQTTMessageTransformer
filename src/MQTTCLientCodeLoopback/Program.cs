@@ -5,11 +5,6 @@
 //
 // https://github.com/hivemq/hivemq-mqtt-client-dotnet 
 //
-using HiveMQtt.Client;
-using HiveMQtt.MQTT5.ReasonCodes;
-using HiveMQtt.MQTT5.Types;
-
-
 namespace devMobile.IoT.MqttTransformer.CodeLoopback;
 
 
