@@ -9,9 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="HiveMQtt" Version="0.36.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.1" />
+    <PackageReference Include="HiveMQtt" Version="0.38.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,6 +21,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="HiveMQtt.Client" />
+    <Using Include="HiveMQtt.MQTT5.ReasonCodes" />
+    <Using Include="HiveMQtt.MQTT5.Types" />
     <Using Include="Microsoft.Extensions.Configuration" />
     <Using Include="System.Text" />
     <Using Include="System.Text.Json" />

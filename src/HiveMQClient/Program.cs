@@ -5,10 +5,6 @@
 //
 // https://github.com/hivemq/hivemq-mqtt-client-dotnet 
 //
-using HiveMQtt.Client;
-using HiveMQtt.MQTT5.ReasonCodes;
-using HiveMQtt.MQTT5.Types;
-
 namespace devMobile.IoT.MqttTransformer.Client;
 
 
@@ -32,7 +28,7 @@ class Program
 
          _applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>();
          if (_applicationSettings is null)
-         {             
+         {
             throw new Exception("ApplicationSettings not configured");
          }
 
@@ -113,10 +109,7 @@ class Program
       }
       _publisherBusy = true;
 
-      var payload = JsonSerializer.Serialize(new
-      {
-         Content = $"{DateTime.UtcNow:yy-MM-dd HH:mm:ss}",
-      });
+      var payload = JsonSerializer.Serialize(new { DeviceID = _applicationSettings.ClientId, CO2 = 123456 });
 
       try
       {
