@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>8794e472-4170-4a61-a1fa-ec6a14f27711</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CS-Script" Version="4.13.2" />
+    <PackageReference Include="HiveMQtt" Version="0.38.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="CSScriptLib" />
+    <Using Include="HiveMQtt.Client" />
+    <Using Include="HiveMQtt.MQTT5.ReasonCodes" />
+    <Using Include="HiveMQtt.MQTT5.Types" />
+    <Using Include="Microsoft.Extensions.Configuration" />
+  </ItemGroup>
+
+</Project>
