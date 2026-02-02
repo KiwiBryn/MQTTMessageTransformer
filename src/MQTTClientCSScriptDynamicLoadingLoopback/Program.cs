@@ -19,12 +19,12 @@ class Program
    //private static readonly ScriptEngine _scriptEngine = new ScriptEngine(_cache, "transforms\\broken.cs");
    //private static readonly ScriptEngine _scriptEngine = new ScriptEngine(_cache, "transforms\\lower.cs");
    //private static readonly ScriptEngine _scriptEngine = new ScriptEngine(_cache, "transforms\\upper.cs");
-   //private static readonly ScriptEngine _scriptEngine = new ScriptEngine(_cache, "transforms\\lowerUpper.cs");
+   private static readonly ScriptEngine _scriptEngine = new ScriptEngine(_cache, "transforms\\lowerUpper.cs");
    //private static readonly ScriptEngine _scriptEngine = new ScriptEngine(_cache, "transforms\\returnsNullmessage.cs");
    //private static readonly ScriptEngine _scriptEngine = new ScriptEngine(_cache, "transforms\\returnsOneNullmessageEnd.cs");
    //private static readonly ScriptEngine _scriptEngine = new ScriptEngine(_cache, "transforms\\returnsOneNullmessageMiddle.cs");
    //private static readonly ScriptEngine _scriptEngine = new ScriptEngine(_cache, "transforms\\returnsOneNullmessageStart.cs");
-   private static readonly ScriptEngine _scriptEngine = new ScriptEngine(_cache, "transforms\\BrokenTopic.cs");
+   //private static readonly ScriptEngine _scriptEngine = new ScriptEngine(_cache, "transforms\\BrokenTopic.cs");
 
 
    static async Task Main()

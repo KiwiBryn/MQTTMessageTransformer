@@ -24,7 +24,7 @@
     <Compile Update="Transforms\Broken.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
-    <Compile Update="Transforms\brokenTopic.cs">
+    <Compile Update="Transforms\BrokenTopic.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
     <Compile Update="Transforms\Lower.cs">
