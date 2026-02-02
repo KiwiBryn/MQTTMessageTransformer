@@ -1,0 +1,26 @@
+﻿using HiveMQtt.MQTT5.Types;
+using System.Text;
+
+public class brokenTopicPayloadTransformer : IMessageTransformer
+{
+   public MQTT5PublishMessage[] Transform(MQTT5PublishMessage message)
+   {
+      if (message.Payload is null)
+      {
+         return [];
+      }
+
+      var payload = Encoding.UTF8.GetString(message.Payload);
+
+      // Simple transformations: convert to lower case
+      var toLower = new MQTT5PublishMessage
+      {
+         //Topic = message.Topic,
+         Topic = null,
+         Payload = Encoding.UTF8.GetBytes(payload.ToLower()),
+         QoS = QualityOfService.AtLeastOnceDelivery
+      };
+
+      return [toLower];
+   }
+}
