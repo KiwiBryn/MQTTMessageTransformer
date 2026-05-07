@@ -8,8 +8,8 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
    public enum DetectionMode
    {
       Undefined = 0,
-      SpikeID = 1,
-      spikeSSA = 2,
+      IID = 1,
+      SSA = 2,
    }
 
    public sealed class TimeSeriesData
@@ -58,9 +58,14 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
 
       public string OutputMessageTransformFile { get; set; } = string.Empty;
       public ISpikeOutputMessageTransformer? OutputMessageTransformer { get; set; } = null;
-   
-      // ---- IID spike tuning knobs (per topic) ----
+
       public int PValueHistoryLength { get; set; } = 32;  // >= 2; typical 16–64
       public double Confidence { get; set; } = 95.0; // 0–100; higher => fewer spikes
+
+      public DetectionMode DetectionMode { get; set; } = DetectionMode.Undefined;
+
+      // SSA-specific tuning knobs (per topic)
+      public int TrainingWindowSize { get; set; } = 32;  // >= 2; typical 16–64
+      public int SeasonalityWindowSize { get; set; } = 32;  // >= 2; typical 16–64
    }
 }

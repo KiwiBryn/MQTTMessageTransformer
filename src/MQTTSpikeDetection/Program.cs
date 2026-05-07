@@ -13,6 +13,7 @@ class Program
 
    // one engine per topic; keeps rolling state for IID detector
    private static readonly ConcurrentDictionary<string, TimeSeriesPredictionEngine<Model.TimeSeriesData, Model.SpikePrediction>> _spikeEngines = new();
+   private static readonly ConcurrentDictionary<string, List<Model.TimeSeriesData>> _ssaTrainingBuffers = new();
 
    // lock per topic because TimeSeriesPredictionEngine is not thread-safe
    private static readonly ConcurrentDictionary<string, object> _engineLocks = new();
@@ -139,21 +140,70 @@ class Program
          return;
       }
 
+      // SSA requires more than 2 * trainingWindowSize rows of training data to Fit so buffer incoming values per topic until we have enough, then create the engine.
+      if (subscribedTopicSettings.DetectionMode == Model.DetectionMode.SSA && !_spikeEngines.ContainsKey(subscribedTopic))
+      {
+         var buffer = _ssaTrainingBuffers.GetOrAdd(subscribedTopic, _ => new List<Model.TimeSeriesData>());
+
+         lock (buffer)
+         {
+            buffer.Add(new Model.TimeSeriesData { Value = value });
+
+            if (buffer.Count <= subscribedTopicSettings.TrainingWindowSize)
+            {
+               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Buffering SSA training data for '{subscribedTopic}' ({buffer.Count}/{subscribedTopicSettings.TrainingWindowSize})");
+               return;
+            }
+         }
+      }
+
       var spikeEngine = _spikeEngines.GetOrAdd(subscribedTopic, _ =>
       {
-         var empty = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
-         var pipe = _MLContext.Transforms.DetectIidSpike(
-                         outputColumnName: nameof(Model.SpikePrediction.Prediction),
-                         inputColumnName: nameof(Model.TimeSeriesData.Value),
-                         confidence: subscribedTopicSettings.Confidence,
-                         pvalueHistoryLength: subscribedTopicSettings.PValueHistoryLength);
+         switch(subscribedTopicSettings.DetectionMode)
+         {
+            case Model.DetectionMode.IID:
+               var empty = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
 
-         var model = pipe.Fit(empty);
+               IidSpikeEstimator iidPipe = _MLContext.Transforms.DetectIidSpike(
+                              outputColumnName: nameof(Model.SpikePrediction.Prediction),
+                              inputColumnName: nameof(Model.TimeSeriesData.Value),
+                              confidence: subscribedTopicSettings.Confidence,
+                              pvalueHistoryLength: subscribedTopicSettings.PValueHistoryLength);
 
-         var engine = model.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.SpikePrediction>(_MLContext);
+               var iidModel = iidPipe.Fit(empty);
+               var iidEngine = iidModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.SpikePrediction>(_MLContext);
 
-         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized IID spike engine for '{e.PublishMessage.Topic}' (pHistory:{subscribedTopicSettings.PValueHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
-         return engine;
+               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized IID spike engine for '{e.PublishMessage.Topic}' (pHistory:{subscribedTopicSettings.PValueHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
+               return iidEngine;
+
+            case Model.DetectionMode.SSA:
+               SsaSpikeEstimator ssaPipe = _MLContext.Transforms.DetectSpikeBySsa(
+                               outputColumnName: nameof(Model.SpikePrediction.Prediction),
+                               inputColumnName: nameof(Model.TimeSeriesData.Value),
+                               confidence: subscribedTopicSettings.Confidence,
+                               pvalueHistoryLength: subscribedTopicSettings.PValueHistoryLength,
+                               trainingWindowSize: subscribedTopicSettings.TrainingWindowSize,
+                               seasonalityWindowSize: subscribedTopicSettings.SeasonalityWindowSize);
+
+               // Use the buffered samples (size > 2 * trainingWindowSize) as the training set.
+               var trainingBuffer = _ssaTrainingBuffers[subscribedTopic];
+               IDataView trainingData;
+               lock (trainingBuffer)
+               {
+                  trainingData = _MLContext.Data.LoadFromEnumerable(trainingBuffer.ToList());
+               }
+
+               var ssaModel = ssaPipe.Fit(trainingData);
+               var ssaEngine = ssaModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.SpikePrediction>(_MLContext);
+
+               // Training buffer no longer needed once the engine is created.
+               _ssaTrainingBuffers.TryRemove(subscribedTopic, out var _);
+
+               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized SSA spike engine for '{e.PublishMessage.Topic}' (pHistory:{subscribedTopicSettings.PValueHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
+               return ssaEngine;
+            default:
+               throw new NotSupportedException($"Detection mode {subscribedTopicSettings.DetectionMode} is not supported.");
+         }
       });
 
       Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Spike prediction for value {value}");
