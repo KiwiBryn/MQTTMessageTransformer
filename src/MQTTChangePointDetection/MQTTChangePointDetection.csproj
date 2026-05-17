@@ -1,0 +1,59 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>f8acef4c-ec5e-46c1-b9c5-32753c84c6d1</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Transforms\InputSKU101991029.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Transforms\InputSKU101991029.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CS-Script" Version="4.14.8" />
+    <PackageReference Include="HiveMQtt" Version="0.42.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.7" />
+    <PackageReference Include="Microsoft.ML" Version="5.0.0" />
+    <PackageReference Include="Microsoft.ML.TimeSeries" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Transforms\ChangePointOutput.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Compile>
+    <Compile Update="Transforms\InputSKU101991042.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="CSScriptLib" />
+    <Using Include="HiveMQtt.Client" />
+    <Using Include="HiveMQtt.Client.Events" />
+    <Using Include="HiveMQtt.MQTT5.ReasonCodes" />
+    <Using Include="HiveMQtt.MQTT5.Types" />
+    <Using Include="Microsoft.Extensions.Configuration" />
+    <Using Include="Microsoft.ML" />
+    <Using Include="Microsoft.ML.Data" />
+    <Using Include="Microsoft.ML.Transforms.TimeSeries" />
+    <Using Include="System.Collections.Concurrent" />
+    <Using Include="System.Text.Json.Serialization" />
+  </ItemGroup>
+
+</Project>
