@@ -9,6 +9,7 @@
    "Temperature":24.2999992
    }
 */
+using System; // Do not remove this using directive as it is required for the InvalidOperationException
 using devMobile.IoT.MqttTransformers;
 
 
@@ -26,8 +27,8 @@ public class InputSKU101991042 : IInputMessageTransformer
    {
       var json = System.Text.Encoding.UTF8.GetString(payload);
 
-      var obj = System.Text.Json.JsonSerializer.Deserialize<SKU101991042>(json);
+      var obj = System.Text.Json.JsonSerializer.Deserialize<SKU101991042>(json) ?? throw new InvalidOperationException("Failed to deserialize payload");
 
-      return obj.Cm; 
+      return obj.Cm;
    }
 }
