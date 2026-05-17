@@ -1,4 +1,7 @@
-﻿namespace devMobile.IoT.MqttTransformers
+﻿//---------------------------------------------------------------------------------
+// Copyright (c) May 2026, devMobile Software
+//
+namespace devMobile.IoT.MqttTransformers
 {
    public interface IInputMessageTransformer
    {
@@ -7,6 +10,6 @@
 
    public interface ISpikeOutputMessageTransformer
    {
-      public byte[] Transform(string sourceTopic, double rawScore, double pvalue);
+      public byte[] Transform(string sourceTopic, double value, double rawScore, double pValue);
    }
 }

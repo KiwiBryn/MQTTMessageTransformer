@@ -1,7 +1,8 @@
-﻿using devMobile.IoT.MqttTransformers;
-using HiveMQtt.MQTT5.Types;
+﻿//---------------------------------------------------------------------------------
+// Copyright (c) May 2026, devMobile Software
+//
+using devMobile.IoT.MqttTransformers;
 using Microsoft.ML.Data;
-using System.Collections.Concurrent;
 
 namespace devMobile.IoT.MqttTransformer.Detection.Model
 {
@@ -26,9 +27,6 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
 
    internal class ApplicationSettings
    {
-      public TimeSpan PublicationTimerDue { get; set; } = TimeSpan.FromSeconds(10);
-      public TimeSpan PublicationTimerPeriod { get; set; } = TimeSpan.FromSeconds(30);
-
       public required string ClientId { get; set; } = string.Empty;
       public required string Host { get; set; } = string.Empty;
       public int Port { get; set; } = 8883;
