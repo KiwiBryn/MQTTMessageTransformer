@@ -50,6 +50,7 @@ class Program
             .WithCleanStart(_applicationSettings.CleanStart)
             .WithUseTls(_applicationSettings.UseTls);
 
+#if HIVEMQ_CERTIFICATE_SUPPORT
          if (!string.IsNullOrWhiteSpace(_applicationSettings.ClientCertificateFileName))
          {
             optionsBuilder.WithClientCertificate(_applicationSettings.ClientCertificateFileName, _applicationSettings.ClientCertificatePassword);
@@ -59,6 +60,7 @@ class Program
          {
             optionsBuilder = optionsBuilder.WithPassword(_applicationSettings.Password);
          }
+#endif
 
          using (_client = new HiveMQClient(optionsBuilder.Build()))
          {
