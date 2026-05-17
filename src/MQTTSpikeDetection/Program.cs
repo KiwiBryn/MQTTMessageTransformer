@@ -1,4 +1,92 @@
-﻿using devMobile.IoT.MqttTransformers;
+﻿/*
+Copyright (c) May 2026, devMobile Software
+
+IID assumes each point is independent — no seasonality, no trends, 
+no sequence learning. It detects anomalies based purely on:
+   statistical deviation from recent values
+   distribution (mean / variance–like behavior
+
+   pvalueHistoryLength the only tuning knob
+   Number of recent points used to estimate distribution which 
+   controls sensitivity vs stability
+
+Scenario A — General use (recommended default)
+   pvalueHistoryLength = 32
+   Good balance
+      Works well for most telemetry / IoT
+      Responsive but not noisy
+
+Scenario B — Noisy / high-variance data
+   pvalueHistoryLength = 64 to 128
+   Reduces false positives
+      Smooths random spikes
+      Slower to detect real anomalies
+
+Scenario C — Highly sensitive detection
+   pvalueHistoryLength = 8 to 24
+   Detects sudden spikes quickly
+      Reacts fast to changes
+      More false positives
+      More jitter
+
+Scenario D — Small datasets / startup
+   pvalueHistoryLength = 16 to 32
+   Works with limited data
+      Faster stabilization than SSA
+
+Too many false spikes
+   Increase: pvalueHistoryLength -> 64 or 128
+
+Missing spikes
+   Decrease: pvalueHistoryLength -> 16 to 24
+
+SSA Is a univariate anomaly detection algorithm that uses Singular 
+   Spectrum Analysis to decompose the time series into components 
+   and identify anomalies based on the reconstruction error. 
+
+   It is effective for detecting anomalies in time series data with seasonality and trends.
+
+   seasonalWindowSize = pattern length
+   trainingWindowSize = how much history the model learns from
+   pvalueHistoryLength = sensitivity / stability
+
+   Scenario A — No strong seasonality
+      seasonalWindowSize = 1 or 2
+      trainingWindowSize = 200 to 500
+
+   Scenario B — Example with real periodic data (recommended)
+   If you do have periodicity:
+      Example: 60-point cycle (very common)
+      pvalueHistoryLength = 32
+      seasonalWindowSize = 60
+      trainingWindowSize = 600 to 1200
+
+   Scenario C — Small datasets
+   If data is limited:
+      pvalueHistoryLength = 32
+      seasonalWindowSize = 10 to 20
+      trainingWindowSize = 150 to 300
+
+   Key constraints
+      trainingWindowSize < seasonalWindowSize
+      trainingWindowSize < pvalueHistoryLength
+      Seasonality guessed incorrectly -> spike detection fails
+
+   Too many false spikes:
+      Increase:
+      pvalueHistoryLength -> 64
+      trainingWindowSize -> larger
+   Miss spikes:
+      Decrease:
+      pvalueHistoryLength -> 16 to 24
+      trainingWindowSize -> slightly smaller
+
+   Practical “safe default” = unsure, this works well in most cases:
+      pvalueHistoryLength = 32
+      seasonalWindowSize = 60
+      trainingWindowSize = 800
+*/
+using devMobile.IoT.MqttTransformers;
 
 namespace devMobile.IoT.MqttTransformer.Detection;
 
@@ -13,7 +101,6 @@ class Program
 
    // one engine per topic; keeps rolling state for IID detector
    private static readonly ConcurrentDictionary<string, TimeSeriesPredictionEngine<Model.TimeSeriesData, Model.SpikePrediction>> _spikeEngines = new();
-   private static readonly ConcurrentDictionary<string, List<Model.TimeSeriesData>> _ssaTrainingBuffers = new();
 
    // lock per topic because TimeSeriesPredictionEngine is not thread-safe
    private static readonly ConcurrentDictionary<string, object> _engineLocks = new();
@@ -21,7 +108,7 @@ class Program
 
    static async Task Main()
    { 
-      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Hive MQ client starting");
+      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Spike detection started");
 
       try
       {
@@ -38,7 +125,10 @@ class Program
              .WithClientId(_applicationSettings.ClientId)
              .WithBroker(_applicationSettings.Host)
              .WithPort(_applicationSettings.Port)
+#if HIVEMQ_USERNAME_AND_PASSWORD_SUPPORT
              .WithUserName(_applicationSettings.UserName)
+             .WithPassword(_applicationSettings.Password)
+#endif
              .WithCleanStart(_applicationSettings.CleanStart)
              .WithUseTls(_applicationSettings.UseTls);
 
@@ -106,7 +196,10 @@ class Program
       }
       finally
       {
-         await _client.DisconnectAsync();
+         if (_client is not null)
+         {
+            await _client.DisconnectAsync();
+         }  
 
          Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Hive MQ client stopped");
       }
@@ -140,24 +233,7 @@ class Program
          return;
       }
 
-      // SSA requires more than 2 * trainingWindowSize rows of training data to Fit so buffer incoming values per topic until we have enough, then create the engine.
-      if (subscribedTopicSettings.DetectionMode == Model.DetectionMode.SSA && !_spikeEngines.ContainsKey(subscribedTopic))
-      {
-         var buffer = _ssaTrainingBuffers.GetOrAdd(subscribedTopic, _ => new List<Model.TimeSeriesData>());
-
-         lock (buffer)
-         {
-            buffer.Add(new Model.TimeSeriesData { Value = value });
-
-            if (buffer.Count <= subscribedTopicSettings.TrainingWindowSize)
-            {
-               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Buffering SSA training data for '{subscribedTopic}' ({buffer.Count}/{subscribedTopicSettings.TrainingWindowSize})");
-               return;
-            }
-         }
-      }
-
-      var spikeEngine = _spikeEngines.GetOrAdd(subscribedTopic, _ =>
+       var spikeEngine = _spikeEngines.GetOrAdd(subscribedTopic, _ =>
       {
          switch(subscribedTopicSettings.DetectionMode)
          {
@@ -185,19 +261,9 @@ class Program
                                trainingWindowSize: subscribedTopicSettings.TrainingWindowSize,
                                seasonalityWindowSize: subscribedTopicSettings.SeasonalityWindowSize);
 
-               // Use the buffered samples (size > 2 * trainingWindowSize) as the training set.
-               var trainingBuffer = _ssaTrainingBuffers[subscribedTopic];
-               IDataView trainingData;
-               lock (trainingBuffer)
-               {
-                  trainingData = _MLContext.Data.LoadFromEnumerable(trainingBuffer.ToList());
-               }
-
-               var ssaModel = ssaPipe.Fit(trainingData);
+               var dataView = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
+               var ssaModel = ssaPipe.Fit(dataView);
                var ssaEngine = ssaModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.SpikePrediction>(_MLContext);
-
-               // Training buffer no longer needed once the engine is created.
-               _ssaTrainingBuffers.TryRemove(subscribedTopic, out var _);
 
                Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized SSA spike engine for '{e.PublishMessage.Topic}' (pHistory:{subscribedTopicSettings.PValueHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
                return ssaEngine;
@@ -226,7 +292,7 @@ class Program
 
          try
          {
-            payload = subscribedTopicSettings.OutputMessageTransformer.Transform(e.PublishMessage.Topic, rawScore, pValue);
+            payload = subscribedTopicSettings.OutputMessageTransformer.Transform(e.PublishMessage.Topic, value, rawScore, pValue);
          }
          catch (Exception ex)
          {
