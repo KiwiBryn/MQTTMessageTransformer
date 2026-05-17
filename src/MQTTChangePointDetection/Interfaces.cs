@@ -11,6 +11,6 @@ namespace devMobile.IoT.MqttTransformers
 
    public interface IChangePointOutputMessageTransformer
    {
-      public byte[] Transform(string sourceTopic, double value,double rawScore, double PValue, double martingale);
+      public byte[] Transform(string sourceTopic, double value, double rawScore, double pValue, double martingale);
    }
 }

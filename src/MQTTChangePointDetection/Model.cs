@@ -56,7 +56,7 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
       public string OutputMessageTransformFile { get; set; } = string.Empty;
       public IChangePointOutputMessageTransformer? OutputMessageTransformer { get; set; } = null;
 
-      public int changeHistoryLength { get; set; }  
+      public int ChangeHistoryLength { get; set; }
       public double Confidence { get; set; }
 
       public DetectionMode DetectionMode { get; set; } = DetectionMode.Undefined;
