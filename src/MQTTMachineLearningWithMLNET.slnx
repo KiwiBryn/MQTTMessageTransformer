@@ -1,7 +1,13 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="CLAUDE.md" />
+  </Folder>
   <Project Path="HiveMQClient/HiveMQClient.csproj" Id="3bc6b9e5-31c1-4a85-9abf-9ee614a1922b" />
   <Project Path="IMessageTransformer/IMessageTransformer.csproj" Id="0c69430e-8455-45a5-9506-0c439dae57d2" />
+  <Project Path="MQTTChangePointDetection/MQTTChangePointDetection.csproj" />
   <Project Path="MQTTCLientCodeLoopback/MQTTCLientCodeLoopback.csproj" Id="631e6dcd-a635-4d0e-a6ea-302f56f1f704" />
   <Project Path="MQTTClientCSScriptDynamicLoadingLoopback/MQTTClientCSScriptDynamicLoadingLoopback.csproj" Id="3ed7de4f-cfc1-46ba-855c-7e267e39c41c" />
   <Project Path="MQTTClientCSScriptLoopback/MQTTClientCSScriptLoopback.csproj" Id="4ec2ca77-a732-4ce8-96f7-2b3cd785d748" />
+  <Project Path="MQTTLivenessMonitor/MQTTLivenessMonitor.csproj" Id="f09a4c9f-94e5-4570-9f92-99f71aaf2ee1" />
+  <Project Path="MQTTSpikeDetection/MQTTSpikeDetection.csproj" Id="85302985-e744-4dae-8771-eec5c5b3e171" />
 </Solution>
