@@ -1,11 +1,13 @@
-﻿
+﻿//---------------------------------------------------------------------------------
+// Copyright (c) May 2026, devMobile Software
+//
 /*
- {
-   "ClientID:"XiaoTandHandCO2A",
+{
+   "ClientID:"Device123",
    "Mm":269,
    "Cm":26.8999996,
    "Temperature":24.2999992
-   }
+}
 */
 
 using devMobile.IoT.MqttTransformers;

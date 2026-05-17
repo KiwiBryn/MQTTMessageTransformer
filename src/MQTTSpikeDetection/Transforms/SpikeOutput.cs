@@ -6,11 +6,13 @@ using System;
 
 public class SpikeOutputTransformer : ISpikeOutputMessageTransformer
 {
-   public byte[] Transform(string topic, double rawScore, double pValue)
+   public byte[] Transform(string topic, double value, double rawScore, double pValue)
    {
       var obj = new
       {
+         Spike = true,
          topic,
+         value,
          rawScore,
          pValue
       };
