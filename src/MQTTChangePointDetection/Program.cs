@@ -111,7 +111,7 @@ class Program
    private static readonly MLContext _MLContext = new MLContext();
 
    // one engine per topic; keeps rolling state for IID detector
-   private static readonly ConcurrentDictionary<string, TimeSeriesPredictionEngine<Model.TimeSeriesData, Model.ChangePointPrediction>> _changePointEngines = new();
+   private static readonly ConcurrentDictionary<string, Lazy<TimeSeriesPredictionEngine<Model.TimeSeriesData, Model.ChangePointPrediction>>> _changePointEngines = new();
 
    // lock per topic because TimeSeriesPredictionEngine is not thread-safe
    private static readonly ConcurrentDictionary<string, object> _engineLocks = new();
@@ -219,7 +219,19 @@ class Program
       Console.ReadLine();
    }
 
-   private static void OnMessageReceived(object? sender, OnMessageReceivedEventArgs e)
+   private static async void OnMessageReceived(object? sender, OnMessageReceivedEventArgs e)
+   {
+      try
+      {
+         await OnMessageReceivedCoreAsync(sender, e);
+      }
+      catch (Exception ex)
+      {
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Unhandled exception in message handler: {ex.Message}");
+      }
+   }
+
+   private static async Task OnMessageReceivedCoreAsync(object? sender, OnMessageReceivedEventArgs e)
    {
       var client = (HiveMQClient)sender!;
 
@@ -230,6 +242,12 @@ class Program
       if (!_applicationSettings.SubscribedTopics.TryGetValue(subscribedTopic, out var subscribedTopicSettings))
       {
          Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} no topic match:{subscribedTopic}");
+         return;
+      }
+
+      if (subscribedTopicSettings.InputMessageTransformer is null)
+      {
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No input transformer for topic: {subscribedTopic}");
          return;
       }
 
@@ -245,57 +263,58 @@ class Program
       }
 
       var changePointEngine = _changePointEngines.GetOrAdd(subscribedTopic, _ =>
-      {
-         try
+         new Lazy<TimeSeriesPredictionEngine<Model.TimeSeriesData, Model.ChangePointPrediction>>(() =>
          {
-            switch (subscribedTopicSettings.DetectionMode)
+            try
             {
-               case Model.DetectionMode.IID:
-                  var empty = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
+               switch (subscribedTopicSettings.DetectionMode)
+               {
+                  case Model.DetectionMode.IID:
+                     var empty = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
 
-                  IidChangePointEstimator iidPipe = _MLContext.Transforms.DetectIidChangePoint(
-                                 outputColumnName: nameof(Model.ChangePointPrediction.Prediction),
-                                 inputColumnName: nameof(Model.TimeSeriesData.Value),
-                                 confidence: subscribedTopicSettings.Confidence,
-                                 changeHistoryLength: subscribedTopicSettings.changeHistoryLength);
+                     IidChangePointEstimator iidPipe = _MLContext.Transforms.DetectIidChangePoint(
+                                    outputColumnName: nameof(Model.ChangePointPrediction.Prediction),
+                                    inputColumnName: nameof(Model.TimeSeriesData.Value),
+                                    confidence: subscribedTopicSettings.Confidence,
+                                    changeHistoryLength: subscribedTopicSettings.ChangeHistoryLength);
 
-                  var iidModel = iidPipe.Fit(empty);
-                  var iidEngine = iidModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.ChangePointPrediction>(_MLContext);
+                     var iidModel = iidPipe.Fit(empty);
+                     var iidEngine = iidModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.ChangePointPrediction>(_MLContext);
 
-                  Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized IID change point engine for '{e.PublishMessage.Topic}' (pHistory:{subscribedTopicSettings.changeHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
-                  return iidEngine;
+                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized IID change point engine for '{subscribedTopic}' (pHistory:{subscribedTopicSettings.ChangeHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
+                     return iidEngine;
 
-               case Model.DetectionMode.SSA:
-                  SsaChangePointEstimator ssaPipe = _MLContext.Transforms.DetectChangePointBySsa(
-                                  outputColumnName: nameof(Model.ChangePointPrediction.Prediction),
-                                  inputColumnName: nameof(Model.TimeSeriesData.Value),
-                                  confidence: subscribedTopicSettings.Confidence,
-                                  changeHistoryLength: subscribedTopicSettings.changeHistoryLength,
-                                  trainingWindowSize: subscribedTopicSettings.TrainingWindowSize,
-                                  seasonalityWindowSize: subscribedTopicSettings.SeasonalityWindowSize);
+                  case Model.DetectionMode.SSA:
+                     SsaChangePointEstimator ssaPipe = _MLContext.Transforms.DetectChangePointBySsa(
+                                     outputColumnName: nameof(Model.ChangePointPrediction.Prediction),
+                                     inputColumnName: nameof(Model.TimeSeriesData.Value),
+                                     confidence: subscribedTopicSettings.Confidence,
+                                     changeHistoryLength: subscribedTopicSettings.ChangeHistoryLength,
+                                     trainingWindowSize: subscribedTopicSettings.TrainingWindowSize,
+                                     seasonalityWindowSize: subscribedTopicSettings.SeasonalityWindowSize);
 
-                  var dataView = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
-                  var ssaModel = ssaPipe.Fit(dataView);
-                  var ssaEngine = ssaModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.ChangePointPrediction>(_MLContext);
+                     var dataView = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
+                     var ssaModel = ssaPipe.Fit(dataView);
+                     var ssaEngine = ssaModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.ChangePointPrediction>(_MLContext);
 
-                  Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized SSA change point engine for '{e.PublishMessage.Topic}' (pHistory:{subscribedTopicSettings.changeHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
-                  return ssaEngine;
-               default:
-                  throw new NotSupportedException($"Detection mode {subscribedTopicSettings.DetectionMode} is not supported.");
+                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized SSA change point engine for '{subscribedTopic}' (pHistory:{subscribedTopicSettings.ChangeHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
+                     return ssaEngine;
+                  default:
+                     throw new NotSupportedException($"Detection mode {subscribedTopicSettings.DetectionMode} is not supported.");
+               }
             }
-         }
-         catch (Exception ex)
-         {
-            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Failed to initialize change point engine for topic '{e.PublishMessage.Topic}': {ex.Message}");
-            throw;
-         }
-      });
+            catch (Exception ex)
+            {
+               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Failed to initialize change point engine for topic '{subscribedTopic}': {ex.Message}");
+               throw;
+            }
+         })).Value;
 
       Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Change point prediction for value {value}");
 
       Model.ChangePointPrediction changePointPrediction;
 
-      var engineLock = _engineLocks.GetOrAdd(e.PublishMessage.Topic, _ => new object());
+      var engineLock = _engineLocks.GetOrAdd(subscribedTopic, _ => new object());
 
       lock (engineLock)
       {
@@ -307,6 +326,12 @@ class Program
          double rawScore = changePointPrediction.Prediction.Length > 1 ? changePointPrediction.Prediction[1] : double.NaN;
          double pValue = changePointPrediction.Prediction.Length > 2 ? changePointPrediction.Prediction[2] : double.NaN;
          double martingale = changePointPrediction.Prediction.Length > 3 ? changePointPrediction.Prediction[3] : double.NaN;
+
+         if (subscribedTopicSettings.OutputMessageTransformer is null)
+         {
+            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No output transformer for topic: {subscribedTopic}");
+            return;
+         }
 
          byte[] payload;
 
@@ -334,7 +359,7 @@ class Program
 
             try
             {
-               var resultPublish = client.PublishAsync(message).Result;
+               var resultPublish = await client.PublishAsync(message);
 
                Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Published:{resultPublish.QoS1ReasonCode} {resultPublish.QoS2ReasonCode}");
             }
