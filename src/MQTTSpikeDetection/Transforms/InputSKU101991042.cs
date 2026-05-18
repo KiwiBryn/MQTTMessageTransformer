@@ -26,8 +26,8 @@ public class InputSKU101991042 : IInputMessageTransformer
    {
       var json = System.Text.Encoding.UTF8.GetString(payload);
 
-      var obj = System.Text.Json.JsonSerializer.Deserialize<SKU101991042>(json);
+      var obj = System.Text.Json.JsonSerializer.Deserialize<SKU101991042>(json) ?? throw new InvalidOperationException("Failed to deserialize payload");
 
-      return obj.Cm; 
+      return obj.Cm;
    }
 }
