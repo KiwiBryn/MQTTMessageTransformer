@@ -9,7 +9,7 @@
    "Temperature":24.2999992
 }
 */
-
+using System; // Donot remove this as required for InvalidOperationException
 using devMobile.IoT.MqttTransformers;
 
 internal class SKU101991042
