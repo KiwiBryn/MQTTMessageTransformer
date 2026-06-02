@@ -15,7 +15,7 @@ public class SpikeOutputTransformer : ISpikeOutputMessageTransformer
    {
       var obj = new
       {
-         Spike = true,
+         DetectionType = "Spike",
          Topic = topic,
          Value = value,
          RawScore = rawScore,
