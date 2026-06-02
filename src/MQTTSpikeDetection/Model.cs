@@ -32,11 +32,17 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
       public int Port { get; set; } = 8883;
       public bool CleanStart { get; set; } = true;
       public bool UseTls { get; set; } = true;
+      public bool AutomaticReconnect { get; set; } = true;
 
+#if HIVEMQ_USERNAME_AND_PASSWORD_SUPPORT      
       public required string UserName { get; set; } = string.Empty;
       public required string Password { get; set; } = string.Empty;
+#endif
+
+#if HIVEMQ_CERTIFICATE_SUPPORT
       public required string ClientCertificateFileName { get; set; } = string.Empty;
       public required string ClientCertificatePassword { get; set; } = string.Empty;
+#endif
 
       public required ConcurrentDictionary<string, TopicConfiguration> SubscribedTopics { get; set; }
    }
