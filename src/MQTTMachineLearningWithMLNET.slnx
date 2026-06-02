@@ -10,4 +10,7 @@
   <Project Path="MQTTClientCSScriptLoopback/MQTTClientCSScriptLoopback.csproj" Id="4ec2ca77-a732-4ce8-96f7-2b3cd785d748" />
   <Project Path="MQTTLivenessMonitor/MQTTLivenessMonitor.csproj" Id="f09a4c9f-94e5-4570-9f92-99f71aaf2ee1" />
   <Project Path="MQTTSpikeDetection/MQTTSpikeDetection.csproj" Id="85302985-e744-4dae-8771-eec5c5b3e171" />
+  <Project Path="NFMQTTUltrasonicRanger/NFMQTTUltrasonicRanger.nfproj" Type="11a8dd76-328b-46df-9f39-f559912d0360" Id="ad763343-ea00-489f-8dbb-3597b3e6f4f4">
+    <Deploy />
+  </Project>
 </Solution>
