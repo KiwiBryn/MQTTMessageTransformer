@@ -24,6 +24,7 @@ using nanoFramework.Json;
 using nanoFramework.M2Mqtt;
 using nanoFramework.M2Mqtt.Messages;
 using nanoFramework.Networking;
+using System.Device.Wifi;
 
 /*
 The EdgeBox 100 firmware ESP32_S3_ALL_UART or ESP32_S3_BLE_UART should work for you depending on type of psram it has.
@@ -111,14 +112,14 @@ namespace devMobile.AzureIoT.EventGridClient
          while (WifiNetworkHelper.Status != NetworkHelperStatus.NetworkIsReady)
          {
             // Attempt to connect using DHCP
-            if (!WifiNetworkHelper.ConnectDhcp(Secrets.WIFI_SSID, Secrets.WIFI_PASSWORD, requiresDateTime: true))
+            if (!WifiNetworkHelper.ConnectDhcp(Secrets.WIFI_SSID, Secrets.WIFI_PASSWORD, reconnectionKind: WifiReconnectionKind.Automatic, requiresDateTime: true))
             {
                Console.WriteLine($"Failed to connect. Error: {WifiNetworkHelper.Status}");
                if (WifiNetworkHelper.HelperException != null)
                {
                   Console.WriteLine($"Exception: {WifiNetworkHelper.HelperException}");
                }
-               Thread.Sleep(1000);
+               Thread.Sleep(5000);
             }
          }
          Console.WriteLine("WiFi connected");
