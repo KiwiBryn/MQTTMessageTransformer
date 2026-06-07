@@ -2,7 +2,6 @@
 // Copyright (c) May 2026, devMobile Software
 //
 using devMobile.IoT.MqttTransformers;
-using Microsoft.ML.Data;
 
 namespace devMobile.IoT.MqttTransformer.Detection.Model
 {
@@ -48,7 +47,7 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
    }
 
    internal class TopicConfiguration
-   {      
+   {
       public QualityOfService InputQualityOfService { get; set; } = QualityOfService.AtLeastOnceDelivery;
 
       public string OutputTopic { get; set; } = string.Empty;
@@ -63,13 +62,31 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
       public string OutputMessageTransformFile { get; set; } = string.Empty;
       public ISpikeOutputMessageTransformer? OutputMessageTransformer { get; set; } = null;
 
-      public int PValueHistoryLength { get; set; } = 32;  // >= 2; typical 16–64
-      public double Confidence { get; set; } = 95.0; // 0–100; higher => fewer spikes
-
       public DetectionMode DetectionMode { get; set; } = DetectionMode.Undefined;
 
-      // SSA-specific tuning knobs (per topic)
-      public int TrainingWindowSize { get; set; } = 32;  // >= 2; typical 16–64
+      public required IIDSettings IIDSettings { get; set; } = new IIDSettings();
+
+      public required SSASettings SSASettings { get; set; } = new SSASettings();
+   }
+
+   public class IIDSettings
+   {
+      public double Confidence { get; set; } = 95.0; // 0–100; higher => fewer spikes
+      public int PValueHistoryLength { get; set; } = 32;  // >= 2; typical 16–64
+
+      // (Positive) Only positive anomalies are detected.(Negative) Only negative anomalies are detected , (TwoSided) Both positive and negative anomalies are detected.
+      public AnomalySide AnomalySide { get; set; } = AnomalySide.TwoSided;
+   }
+
+   // SSA-specific tuning knobs (per topic)
+   public class SSASettings
+   {
+      public double Confidence { get; set; } = 95.0; // 0–100; higher => fewer spikes
+      public int PValueHistoryLength { get; set; } = 32;  // >= 2; typical 16–64
       public int SeasonalityWindowSize { get; set; } = 32;  // >= 2; typical 16–64
+      public int TrainingWindowSize { get; set; } = 32;  // >= 2; typical 16–64
+
+      // (Positive) Only positive anomalies are detected (Negative) Only negative anomalies are detected (TwoSided) Both positive and negative anomalies are detected.
+      public AnomalySide AnomalySide { get; set; } = AnomalySide.TwoSided;
    }
 }
