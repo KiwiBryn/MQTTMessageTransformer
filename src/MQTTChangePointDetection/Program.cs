@@ -108,7 +108,7 @@ class Program
    private static HiveMQClient? _client;
 
    // ML.NET context and per-topic state
-   private static readonly MLContext _MLContext = new MLContext();
+   private static readonly MLContext _MLContext = new();
 
    // one engine per topic; keeps rolling state for IID detector
    private static readonly ConcurrentDictionary<string, Lazy<TimeSeriesPredictionEngine<Model.TimeSeriesData, Model.ChangePointPrediction>>> _changePointEngines = new();
@@ -125,33 +125,32 @@ class Program
       {
          // Load configuration
          var configuration = new ConfigurationBuilder()
-             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-             .AddUserSecrets<Program>()
-             .Build();
+           .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+           .AddUserSecrets<Program>()
+           .Build();
 
          _applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>() ?? throw new Exception("ApplicationSettings not configured");
 
          // HiveMQ client options
          var optionsBuilder = new HiveMQClientOptionsBuilder()
-             .WithClientId(_applicationSettings.ClientId)
-             .WithBroker(_applicationSettings.Host)
-             .WithPort(_applicationSettings.Port)
-#if HIVEMQ_USERNAME_AND_PASSWORD_SUPPORT
-             .WithUserName(_applicationSettings.UserName)
-             .WithPassword(_applicationSettings.Password)
+            .WithClientId(_applicationSettings.ClientId)
+            .WithBroker(_applicationSettings.Host)
+            .WithPort(_applicationSettings.Port)
+#if HIVEMQ_CERTIFICATE_SUPPORT
+            .WithClientCertificate(_applicationSettings.ClientCertificateFileName, _applicationSettings.ClientCertificatePassword);
 #endif
-             .WithCleanStart(_applicationSettings.CleanStart)
-             .WithUseTls(_applicationSettings.UseTls);
+#if HIVEMQ_USERNAME_AND_PASSWORD_SUPPORT
+            .WithUserName(_applicationSettings.UserName)
+            .WithPassword(_applicationSettings.Password)
+#endif
+            .WithCleanStart(_applicationSettings.CleanStart)
+            .WithAutomaticReconnect(_applicationSettings.AutomaticReconnect)
+            .WithUseTls(_applicationSettings.UseTls);
 
 #if HIVEMQ_CERTIFICATE_SUPPORT
          if (!string.IsNullOrWhiteSpace(_applicationSettings.ClientCertificateFileName))
          {
             optionsBuilder.WithClientCertificate(_applicationSettings.ClientCertificateFileName,_applicationSettings.ClientCertificatePassword);
-         }
-
-         if (!string.IsNullOrWhiteSpace(_applicationSettings.Password))
-         {
-            optionsBuilder = optionsBuilder.WithPassword(_applicationSettings.Password);
          }
 #endif
 
@@ -236,8 +235,18 @@ class Program
       var client = (HiveMQClient)sender!;
 
       string subscribedTopic = e.PublishMessage.Topic ?? string.Empty;
+      if (string.IsNullOrEmpty(subscribedTopic))
+      {
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No topic for received message");
+         return;
+      }
+      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.receive start Topic:{subscribedTopic} QoS:{e.PublishMessage.QoS}");
 
-      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.receive start Topic:{e.PublishMessage.Topic} QoS:{e.PublishMessage.QoS}");
+      if (e.PublishMessage.Payload is null)
+      {
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No payload for received message on topic {subscribedTopic}");
+         return;
+      }
 
       if (!_applicationSettings.SubscribedTopics.TryGetValue(subscribedTopic, out var subscribedTopicSettings))
       {
@@ -248,6 +257,12 @@ class Program
       if (subscribedTopicSettings.InputMessageTransformer is null)
       {
          Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No input transformer for topic: {subscribedTopic}");
+         return;
+      }
+
+      if (subscribedTopicSettings.OutputMessageTransformer is null)
+      {
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No output transformer for topic: {subscribedTopic}");
          return;
       }
 
@@ -306,9 +321,16 @@ class Program
             catch (Exception ex)
             {
                Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Failed to initialize change point engine for topic '{subscribedTopic}': {ex.Message}");
-               throw;
+
+               return null!;
             }
-         })).Value;
+         }, LazyThreadSafetyMode.PublicationOnly)).Value;
+
+      if (changePointEngine is null)
+      {
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No change point engine available for topic '{subscribedTopic}'");
+         return;
+      }
 
       Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Change point prediction for value {value}");
 
@@ -327,17 +349,11 @@ class Program
          double pValue = changePointPrediction.Prediction.Length > 2 ? changePointPrediction.Prediction[2] : double.NaN;
          double martingale = changePointPrediction.Prediction.Length > 3 ? changePointPrediction.Prediction[3] : double.NaN;
 
-         if (subscribedTopicSettings.OutputMessageTransformer is null)
-         {
-            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No output transformer for topic: {subscribedTopic}");
-            return;
-         }
-
          byte[] payload;
 
          try
          {
-            payload = subscribedTopicSettings.OutputMessageTransformer.Transform(e.PublishMessage.Topic, value, rawScore, pValue, martingale);
+            payload = subscribedTopicSettings.OutputMessageTransformer.Transform(subscribedTopic, value, rawScore, pValue, martingale);
          }
          catch (Exception ex)
          {

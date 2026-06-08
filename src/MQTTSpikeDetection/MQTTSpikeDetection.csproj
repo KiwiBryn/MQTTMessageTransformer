@@ -51,6 +51,7 @@
     <Using Include="HiveMQtt.MQTT5.Types" />
     <Using Include="Microsoft.Extensions.Configuration" />
     <Using Include="Microsoft.ML" />
+    <Using Include="Microsoft.ML.Data" />
     <Using Include="Microsoft.ML.Transforms.TimeSeries" />
     <Using Include="System.Collections.Concurrent" />
   </ItemGroup>

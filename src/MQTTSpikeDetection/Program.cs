@@ -97,7 +97,7 @@ class Program
    private static HiveMQClient? _client;
 
    // ML.NET context and per-topic state
-   private static readonly MLContext _MLContext = new MLContext();
+   private static readonly MLContext _MLContext = new();
 
    // one engine per topic; keeps rolling state for IID detector
    private static readonly ConcurrentDictionary<string, Lazy<TimeSeriesPredictionEngine<Model.TimeSeriesData, Model.SpikePrediction>>> _spikeEngines = new();
@@ -107,40 +107,39 @@ class Program
 
 
    static async Task Main()
-   { 
+   {
       Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Spike detection started");
 
       try
       {
          // Load configuration
          var configuration = new ConfigurationBuilder()
-             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-             .AddUserSecrets<Program>()
-             .Build();
+           .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+           .AddUserSecrets<Program>()
+           .Build();
 
          _applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>() ?? throw new Exception("ApplicationSettings not configured");
 
          // HiveMQ client options
          var optionsBuilder = new HiveMQClientOptionsBuilder()
-             .WithClientId(_applicationSettings.ClientId)
-             .WithBroker(_applicationSettings.Host)
-             .WithPort(_applicationSettings.Port)
-#if HIVEMQ_USERNAME_AND_PASSWORD_SUPPORT
-             .WithUserName(_applicationSettings.UserName)
-             .WithPassword(_applicationSettings.Password)
+            .WithClientId(_applicationSettings.ClientId)
+            .WithBroker(_applicationSettings.Host)
+            .WithPort(_applicationSettings.Port)
+#if HIVEMQ_CERTIFICATE_SUPPORT
+            .WithClientCertificate(_applicationSettings.ClientCertificateFileName, _applicationSettings.ClientCertificatePassword);
 #endif
-             .WithCleanStart(_applicationSettings.CleanStart)
-             .WithUseTls(_applicationSettings.UseTls);
+#if HIVEMQ_USERNAME_AND_PASSWORD_SUPPORT
+            .WithUserName(_applicationSettings.UserName)
+            .WithPassword(_applicationSettings.Password)
+#endif
+            .WithCleanStart(_applicationSettings.CleanStart)
+            .WithAutomaticReconnect(_applicationSettings.AutomaticReconnect)
+            .WithUseTls(_applicationSettings.UseTls);
 
 #if HIVEMQ_CERTIFICATE_SUPPORT
          if (!string.IsNullOrWhiteSpace(_applicationSettings.ClientCertificateFileName))
          {
             optionsBuilder.WithClientCertificate(_applicationSettings.ClientCertificateFileName,_applicationSettings.ClientCertificatePassword);
-         }
-
-         if (!string.IsNullOrWhiteSpace(_applicationSettings.Password))
-         {
-            optionsBuilder = optionsBuilder.WithPassword(_applicationSettings.Password);
          }
 #endif
 
@@ -199,7 +198,7 @@ class Program
          if (_client is not null)
          {
             await _client.DisconnectAsync();
-         }  
+         }
 
          Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Hive MQ client stopped");
       }
@@ -225,9 +224,19 @@ class Program
       var client = (HiveMQClient)sender!;
 
       string subscribedTopic = e.PublishMessage.Topic ?? string.Empty;
+      if (string.IsNullOrEmpty(subscribedTopic))
+      {
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No topic for received message");
+         return;
+      }
+      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.receive start Topic:{subscribedTopic} QoS:{e.PublishMessage.QoS}");
 
-      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.receive start Topic:{e.PublishMessage.Topic} QoS:{e.PublishMessage.QoS}");
-            
+      if (e.PublishMessage.Payload is null)
+      {
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No payload for received message on topic {subscribedTopic}");
+         return;
+      }
+
       if (!_applicationSettings.SubscribedTopics.TryGetValue(subscribedTopic, out var subscribedTopicSettings))
       {
          Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} no topic match:{subscribedTopic}");
@@ -237,6 +246,12 @@ class Program
       if (subscribedTopicSettings.InputMessageTransformer is null)
       {
          Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No input transformer for topic: {subscribedTopic}");
+         return;
+      }
+
+      if (subscribedTopicSettings.OutputMessageTransformer is null)
+      {
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No output transformer for topic: {subscribedTopic}");
          return;
       }
 
@@ -254,6 +269,8 @@ class Program
       var spikeEngine = _spikeEngines.GetOrAdd(subscribedTopic, _ =>
          new Lazy<TimeSeriesPredictionEngine<Model.TimeSeriesData, Model.SpikePrediction>>(() =>
          {
+         try
+         {
             switch (subscribedTopicSettings.DetectionMode)
             {
                case Model.DetectionMode.IID:
@@ -262,34 +279,47 @@ class Program
                   IidSpikeEstimator iidPipe = _MLContext.Transforms.DetectIidSpike(
                                  outputColumnName: nameof(Model.SpikePrediction.Prediction),
                                  inputColumnName: nameof(Model.TimeSeriesData.Value),
-                                 confidence: subscribedTopicSettings.Confidence,
-                                 pvalueHistoryLength: subscribedTopicSettings.PValueHistoryLength);
+                                 confidence: subscribedTopicSettings.IIDSettings.Confidence,
+                                 pvalueHistoryLength: subscribedTopicSettings.IIDSettings.PValueHistoryLength,
+                                 side: subscribedTopicSettings.IIDSettings.AnomalySide);
+                     var iidModel = iidPipe.Fit(empty);
+                     var iidEngine = iidModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.SpikePrediction>(_MLContext);
 
-                  var iidModel = iidPipe.Fit(empty);
-                  var iidEngine = iidModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.SpikePrediction>(_MLContext);
+                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized IID spike engine for '{subscribedTopic}' (PValueHistoryLength:{subscribedTopicSettings.IIDSettings.PValueHistoryLength}, Confidence:{subscribedTopicSettings.IIDSettings.Confidence}, AnomalySide:{subscribedTopicSettings.IIDSettings.AnomalySide})");
+                     return iidEngine;
 
-                  Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized IID spike engine for '{subscribedTopic}' (pHistory:{subscribedTopicSettings.PValueHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
-                  return iidEngine;
+                  case Model.DetectionMode.SSA:
+                     SsaSpikeEstimator ssaPipe = _MLContext.Transforms.DetectSpikeBySsa(
+                                     outputColumnName: nameof(Model.SpikePrediction.Prediction),
+                                     inputColumnName: nameof(Model.TimeSeriesData.Value),
+                                     confidence: subscribedTopicSettings.SSASettings.Confidence,
+                                     pvalueHistoryLength: subscribedTopicSettings.SSASettings.PValueHistoryLength,
+                                     trainingWindowSize: subscribedTopicSettings.SSASettings.TrainingWindowSize,
+                                     seasonalityWindowSize: subscribedTopicSettings.SSASettings.SeasonalityWindowSize,
+                                     side: subscribedTopicSettings.SSASettings.AnomalySide);
 
-               case Model.DetectionMode.SSA:
-                  SsaSpikeEstimator ssaPipe = _MLContext.Transforms.DetectSpikeBySsa(
-                                  outputColumnName: nameof(Model.SpikePrediction.Prediction),
-                                  inputColumnName: nameof(Model.TimeSeriesData.Value),
-                                  confidence: subscribedTopicSettings.Confidence,
-                                  pvalueHistoryLength: subscribedTopicSettings.PValueHistoryLength,
-                                  trainingWindowSize: subscribedTopicSettings.TrainingWindowSize,
-                                  seasonalityWindowSize: subscribedTopicSettings.SeasonalityWindowSize);
+                     var dataView = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
+                     var ssaModel = ssaPipe.Fit(dataView);
+                     var ssaEngine = ssaModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.SpikePrediction>(_MLContext);
 
-                  var dataView = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
-                  var ssaModel = ssaPipe.Fit(dataView);
-                  var ssaEngine = ssaModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.SpikePrediction>(_MLContext);
-
-                  Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized SSA spike engine for '{subscribedTopic}' (pHistory:{subscribedTopicSettings.PValueHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
-                  return ssaEngine;
-               default:
-                  throw new NotSupportedException($"Detection mode {subscribedTopicSettings.DetectionMode} is not supported.");
+                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized SSA spike engine for '{subscribedTopic}' (PValueHistoryLength:{subscribedTopicSettings.SSASettings.PValueHistoryLength}, Confidence:{subscribedTopicSettings.SSASettings.Confidence}, TrainingWindowSize:{subscribedTopicSettings.SSASettings.TrainingWindowSize}, SeasonalityWindowSize:{subscribedTopicSettings.SSASettings.SeasonalityWindowSize}, AnomalySide:{subscribedTopicSettings.SSASettings.AnomalySide})");
+                     return ssaEngine;
+                  default:
+                     throw new NotSupportedException($"Detection mode {subscribedTopicSettings.DetectionMode} is not supported.");
+               }
             }
-         })).Value;
+            catch (Exception ex)
+            {
+               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Failed to initialize change point engine for topic '{subscribedTopic}': {ex.Message}");
+               return null!;
+            }
+         }, LazyThreadSafetyMode.PublicationOnly)).Value;
+
+      if (spikeEngine is null)
+      {
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No spike engine available for topic '{subscribedTopic}'");
+         return;
+      }  
 
       Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Spike prediction for value {value}");
 
@@ -307,17 +337,11 @@ class Program
          double rawScore = spikePrediction.Prediction.Length > 1 ? spikePrediction.Prediction[1] : double.NaN;
          double pValue = spikePrediction.Prediction.Length > 2 ? spikePrediction.Prediction[2] : double.NaN;
 
-         if (subscribedTopicSettings.OutputMessageTransformer is null)
-         {
-            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No output transformer for topic: {subscribedTopic}");
-            return;
-         }
-
          byte[] payload;
 
          try
          {
-            payload = subscribedTopicSettings.OutputMessageTransformer.Transform(e.PublishMessage.Topic, value, rawScore, pValue);
+            payload = subscribedTopicSettings.OutputMessageTransformer.Transform(subscribedTopic, value, rawScore, pValue);
          }
          catch (Exception ex)
          {
@@ -340,7 +364,7 @@ class Program
             try
             {
                var resultPublish = await client.PublishAsync(message);
-   
+
                Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Published:{resultPublish.QoS1ReasonCode} {resultPublish.QoS2ReasonCode}");
             }
             catch (Exception ex)

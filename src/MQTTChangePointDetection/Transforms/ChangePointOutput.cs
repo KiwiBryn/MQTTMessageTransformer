@@ -14,7 +14,7 @@ public class ChangePointOutputTransformer : IChangePointOutputMessageTransformer
    {
       var obj = new
       {
-         ChangePoint = true,
+         DetectionType = "ChangePoint",
          Value = value,
          SourceTopic = sourceTopic,
          RawScore = rawScore,
