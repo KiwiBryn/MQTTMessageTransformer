@@ -269,39 +269,40 @@ class Program
       var spikeEngine = _spikeEngines.GetOrAdd(subscribedTopic, _ =>
          new Lazy<TimeSeriesPredictionEngine<Model.TimeSeriesData, Model.SpikePrediction>>(() =>
          {
-            try
+         try
+         {
+            switch (subscribedTopicSettings.DetectionMode)
             {
-               switch (subscribedTopicSettings.DetectionMode)
-               {
-                  case Model.DetectionMode.IID:
-                     var empty = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
+               case Model.DetectionMode.IID:
+                  var empty = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
 
-                     IidSpikeEstimator iidPipe = _MLContext.Transforms.DetectIidSpike(
-                                    outputColumnName: nameof(Model.SpikePrediction.Prediction),
-                                    inputColumnName: nameof(Model.TimeSeriesData.Value),
-                                    confidence: subscribedTopicSettings.Confidence,
-                                    pvalueHistoryLength: subscribedTopicSettings.PValueHistoryLength);
-
+                  IidSpikeEstimator iidPipe = _MLContext.Transforms.DetectIidSpike(
+                                 outputColumnName: nameof(Model.SpikePrediction.Prediction),
+                                 inputColumnName: nameof(Model.TimeSeriesData.Value),
+                                 confidence: subscribedTopicSettings.IIDSettings.Confidence,
+                                 pvalueHistoryLength: subscribedTopicSettings.IIDSettings.PValueHistoryLength,
+                                 side: subscribedTopicSettings.IIDSettings.AnomalySide);
                      var iidModel = iidPipe.Fit(empty);
                      var iidEngine = iidModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.SpikePrediction>(_MLContext);
 
-                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized IID spike engine for '{subscribedTopic}' (pHistory:{subscribedTopicSettings.PValueHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
+                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized IID spike engine for '{subscribedTopic}' (PValueHistoryLength:{subscribedTopicSettings.IIDSettings.PValueHistoryLength}, Confidence:{subscribedTopicSettings.IIDSettings.Confidence}, AnomalySide:{subscribedTopicSettings.IIDSettings.AnomalySide})");
                      return iidEngine;
 
                   case Model.DetectionMode.SSA:
                      SsaSpikeEstimator ssaPipe = _MLContext.Transforms.DetectSpikeBySsa(
                                      outputColumnName: nameof(Model.SpikePrediction.Prediction),
                                      inputColumnName: nameof(Model.TimeSeriesData.Value),
-                                     confidence: subscribedTopicSettings.Confidence,
-                                     pvalueHistoryLength: subscribedTopicSettings.PValueHistoryLength,
-                                     trainingWindowSize: subscribedTopicSettings.TrainingWindowSize,
-                                     seasonalityWindowSize: subscribedTopicSettings.SeasonalityWindowSize);
+                                     confidence: subscribedTopicSettings.SSASettings.Confidence,
+                                     pvalueHistoryLength: subscribedTopicSettings.SSASettings.PValueHistoryLength,
+                                     trainingWindowSize: subscribedTopicSettings.SSASettings.TrainingWindowSize,
+                                     seasonalityWindowSize: subscribedTopicSettings.SSASettings.SeasonalityWindowSize,
+                                     side: subscribedTopicSettings.SSASettings.AnomalySide);
 
                      var dataView = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
                      var ssaModel = ssaPipe.Fit(dataView);
                      var ssaEngine = ssaModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.SpikePrediction>(_MLContext);
 
-                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized SSA spike engine for '{subscribedTopic}' (pHistory:{subscribedTopicSettings.PValueHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
+                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized SSA spike engine for '{subscribedTopic}' (PValueHistoryLength:{subscribedTopicSettings.SSASettings.PValueHistoryLength}, Confidence:{subscribedTopicSettings.SSASettings.Confidence}, TrainingWindowSize:{subscribedTopicSettings.SSASettings.TrainingWindowSize}, SeasonalityWindowSize:{subscribedTopicSettings.SSASettings.SeasonalityWindowSize}, AnomalySide:{subscribedTopicSettings.SSASettings.AnomalySide})");
                      return ssaEngine;
                   default:
                      throw new NotSupportedException($"Detection mode {subscribedTopicSettings.DetectionMode} is not supported.");
