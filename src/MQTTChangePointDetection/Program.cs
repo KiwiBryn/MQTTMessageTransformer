@@ -290,29 +290,29 @@ class Program
                      IidChangePointEstimator iidPipe = _MLContext.Transforms.DetectIidChangePoint(
                                     outputColumnName: nameof(Model.ChangePointPrediction.Prediction),
                                     inputColumnName: nameof(Model.TimeSeriesData.Value),
-                                    confidence: subscribedTopicSettings.Confidence,
-                                    changeHistoryLength: subscribedTopicSettings.ChangeHistoryLength);
+                                    confidence: subscribedTopicSettings.IIDSettings.Confidence,
+                                    changeHistoryLength: subscribedTopicSettings.IIDSettings.ChangeHistoryLength);
 
                      var iidModel = iidPipe.Fit(empty);
                      var iidEngine = iidModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.ChangePointPrediction>(_MLContext);
 
-                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized IID change point engine for '{subscribedTopic}' (pHistory:{subscribedTopicSettings.ChangeHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
+                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized IID change point engine for '{subscribedTopic}' conf:{subscribedTopicSettings.IIDSettings.Confidence}, changeHistory:{subscribedTopicSettings.IIDSettings.ChangeHistoryLength}, AnomalySide:{subscribedTopicSettings.IIDSettings.AnomalySide}");
                      return iidEngine;
 
                   case Model.DetectionMode.SSA:
                      SsaChangePointEstimator ssaPipe = _MLContext.Transforms.DetectChangePointBySsa(
                                      outputColumnName: nameof(Model.ChangePointPrediction.Prediction),
                                      inputColumnName: nameof(Model.TimeSeriesData.Value),
-                                     confidence: subscribedTopicSettings.Confidence,
-                                     changeHistoryLength: subscribedTopicSettings.ChangeHistoryLength,
-                                     trainingWindowSize: subscribedTopicSettings.TrainingWindowSize,
-                                     seasonalityWindowSize: subscribedTopicSettings.SeasonalityWindowSize);
+                                     confidence: subscribedTopicSettings.SSASettings.Confidence,
+                                     changeHistoryLength: subscribedTopicSettings.SSASettings.ChangeHistoryLength,
+                                     trainingWindowSize: subscribedTopicSettings.SSASettings.TrainingWindowSize,
+                                     seasonalityWindowSize: subscribedTopicSettings.SSASettings.SeasonalityWindowSize);
 
                      var dataView = _MLContext.Data.LoadFromEnumerable(new List<Model.TimeSeriesData>());
                      var ssaModel = ssaPipe.Fit(dataView);
                      var ssaEngine = ssaModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.ChangePointPrediction>(_MLContext);
 
-                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized SSA change point engine for '{subscribedTopic}' (pHistory:{subscribedTopicSettings.ChangeHistoryLength}, conf:{subscribedTopicSettings.Confidence})");
+                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized SSA change point engine for '{subscribedTopic}' conf:{subscribedTopicSettings.SSASettings.Confidence}, changeHistory:{subscribedTopicSettings.SSASettings.ChangeHistoryLength}, trainingWindow:{subscribedTopicSettings.SSASettings.TrainingWindowSize}, seasonalityWindow:{subscribedTopicSettings.SSASettings.SeasonalityWindowSize}, AnomalySide:{subscribedTopicSettings.SSASettings.AnomalySide}");
                      return ssaEngine;
                   default:
                      throw new NotSupportedException($"Detection mode {subscribedTopicSettings.DetectionMode} is not supported.");
