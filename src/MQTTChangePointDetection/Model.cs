@@ -73,9 +73,6 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
    {
       public double Confidence { get; set; } = 95.0; // 0–100; higher => fewer spikes
       public int ChangeHistoryLength { get; set; } = 32;  // >= 2; typical 16–64
-
-      // (Positive) Only positive anomalies are detected.(Negative) Only negative anomalies are detected , (TwoSided) Both positive and negative anomalies are detected.
-      public AnomalySide AnomalySide { get; set; } = AnomalySide.TwoSided;
    }
  
    // SSA-specific tuning knobs (per topic)
@@ -85,8 +82,5 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
       public int ChangeHistoryLength { get; set; } = 32;  // >= 2; typical 16–64
       public int SeasonalityWindowSize { get; set; } = 32;  // >= 2; typical 16–64
       public int TrainingWindowSize { get; set; } = 32;  // >= 2; typical 16–64
-
-      // (Positive) Only positive anomalies are detected (Negative) Only negative anomalies are detected (TwoSided) Both positive and negative anomalies are detected.
-      public AnomalySide AnomalySide { get; set; } = AnomalySide.TwoSided;
    }
 }

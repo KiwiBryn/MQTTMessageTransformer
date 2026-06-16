@@ -296,7 +296,7 @@ class Program
                      var iidModel = iidPipe.Fit(empty);
                      var iidEngine = iidModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.ChangePointPrediction>(_MLContext);
 
-                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized IID change point engine for '{subscribedTopic}' conf:{subscribedTopicSettings.IIDSettings.Confidence}, changeHistory:{subscribedTopicSettings.IIDSettings.ChangeHistoryLength}, AnomalySide:{subscribedTopicSettings.IIDSettings.AnomalySide}");
+                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized IID change point engine for '{subscribedTopic}' conf:{subscribedTopicSettings.IIDSettings.Confidence}, changeHistory:{subscribedTopicSettings.IIDSettings.ChangeHistoryLength}");
                      return iidEngine;
 
                   case Model.DetectionMode.SSA:
@@ -312,7 +312,7 @@ class Program
                      var ssaModel = ssaPipe.Fit(dataView);
                      var ssaEngine = ssaModel.CreateTimeSeriesEngine<Model.TimeSeriesData, Model.ChangePointPrediction>(_MLContext);
 
-                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized SSA change point engine for '{subscribedTopic}' conf:{subscribedTopicSettings.SSASettings.Confidence}, changeHistory:{subscribedTopicSettings.SSASettings.ChangeHistoryLength}, trainingWindow:{subscribedTopicSettings.SSASettings.TrainingWindowSize}, seasonalityWindow:{subscribedTopicSettings.SSASettings.SeasonalityWindowSize}, AnomalySide:{subscribedTopicSettings.SSASettings.AnomalySide}");
+                     Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Initialized SSA change point engine for '{subscribedTopic}' conf:{subscribedTopicSettings.SSASettings.Confidence}, changeHistory:{subscribedTopicSettings.SSASettings.ChangeHistoryLength}, trainingWindow:{subscribedTopicSettings.SSASettings.TrainingWindowSize}, seasonalityWindow:{subscribedTopicSettings.SSASettings.SeasonalityWindowSize}");
                      return ssaEngine;
                   default:
                      throw new NotSupportedException($"Detection mode {subscribedTopicSettings.DetectionMode} is not supported.");
