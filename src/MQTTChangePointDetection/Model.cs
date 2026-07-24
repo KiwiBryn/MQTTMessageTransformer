@@ -46,7 +46,7 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
    }
 
    internal class TopicConfiguration
-   {      
+   {
       public QualityOfService InputQualityOfService { get; set; } = QualityOfService.AtLeastOnceDelivery;
 
       public string OutputTopic { get; set; } = string.Empty;
@@ -61,13 +61,26 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
       public string OutputMessageTransformFile { get; set; } = string.Empty;
       public IChangePointOutputMessageTransformer? OutputMessageTransformer { get; set; } = null;
 
-      public int ChangeHistoryLength { get; set; }
-      public double Confidence { get; set; }
 
       public DetectionMode DetectionMode { get; set; } = DetectionMode.Undefined;
 
-      // SSA-specific tuning knobs (per topic)
-      public int TrainingWindowSize { get; set; } = 32; 
-      public int SeasonalityWindowSize { get; set; } = 32; 
+      public required IIDSettings IIDSettings { get; set; } = new IIDSettings();
+
+      public required SSASettings SSASettings { get; set; } = new SSASettings();
+   }
+
+   public class IIDSettings
+   {
+      public double Confidence { get; set; } = 95.0; // 0–100; higher => fewer spikes
+      public int ChangeHistoryLength { get; set; } = 32;  // >= 2; typical 16–64
+   }
+ 
+   // SSA-specific tuning knobs (per topic)
+   public class SSASettings
+   {
+      public double Confidence { get; set; } = 95.0; // 0–100; higher => fewer spikes
+      public int ChangeHistoryLength { get; set; } = 32;  // >= 2; typical 16–64
+      public int SeasonalityWindowSize { get; set; } = 32;  // >= 2; typical 16–64
+      public int TrainingWindowSize { get; set; } = 32;  // >= 2; typical 16–64
    }
 }
