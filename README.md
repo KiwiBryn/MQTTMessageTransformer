@@ -1,0 +1,98 @@
+# NanoMQTTMessageTransformer
+
+A collection of MQTT message transformation, monitoring, and analytics examples built with .NET.
+
+This repository explores techniques for:
+
+* MQTT message ingestion and republishing
+* Message transformation pipelines
+* Dynamic C# script-based transformations
+* MQTT loopback testing
+* Device liveness monitoring
+* Spike detection
+* Change-point detection
+* ML.NET-based analytics for MQTT telemetry
+
+## Solution Structure
+
+The repository contains several sample projects focused on different MQTT processing scenarios. [\[github.com\]](https://github.com/KiwiBryn/NanoMQTTMessageTransformer/tree/main/src)
+
+```text
+src/
+├── HiveMQClient/
+├── IMessageTransformer/
+├── MQTTCLientCodeLoopback/
+├── MQTTChangePointDetection/
+├── MQTTClientCSScriptDynamicLoadingLoopback/
+├── MQTTClientCSScriptLoopback/
+├── MQTTLivenessMonitor/
+├── MQTTSpikeDetection/
+├── NFMQTTUltrasonicRanger/
+└── MQTTMachineLearningWithMLNET.slnx
+```
+
+## Key Features
+
+### Dynamic Message Transformation
+
+Use C# scripts to transform MQTT payloads without rebuilding applications.
+
+### Anomaly Detection
+
+Detect unusual telemetry patterns including:
+
+* Sudden spikes
+* Sensor drift
+* Change points in streaming data
+
+### Device Monitoring
+
+Monitor MQTT-connected devices and identify offline or unresponsive nodes.
+
+### Machine Learning Integration
+
+Experiment with ML.NET models for real-time telemetry analysis and event detection.
+
+## Example Use Cases
+
+* IoT sensor monitoring
+* Edge-to-cloud telemetry processing
+* MQTT topic routing
+* Sensor anomaly detection
+* Industrial monitoring
+* Rapid prototyping of MQTT transformations
+
+## Architecture
+
+```text
+MQTT Publisher
+       │
+       ▼
+  MQTT Broker
+       │
+       ▼
+ Message Consumer
+       │
+       ▼
+ Transformation Engine
+       │
+       ├── Rule-Based Processing
+       ├── C# Script Processing
+       ├── Spike Detection
+       ├── Change Detection
+       └── ML.NET Analysis
+       │
+       ▼
+ MQTT Publisher / Alerts / Storage
+```
+
+## Warning
+* These projects are intended as experiments and learning exercises.
+* Samples may be updated as the Mistral AI APIs evolve.
+* Error handling, security, and production readiness may vary between PoCs.
+
+## License
+
+MIT License
+
+***
