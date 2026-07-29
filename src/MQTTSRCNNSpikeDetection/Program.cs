@@ -183,9 +183,10 @@ class Program
                         + subscribedTopicSettings.SrCnnSettings.BackAddWindowSize;
 
       List<Model.SpikePrediction> spikePredictions;
+      var engineLock = _engineLocks.GetOrAdd(subscribedTopic, _ => new object());
+
 
       var buffer = _buffers.GetOrAdd(subscribedTopic, _ => new Queue<Model.TimeSeriesData>(maxBufferSize));
-      var engineLock = _engineLocks.GetOrAdd(subscribedTopic, _ => new object());
 
       lock (engineLock)
       {
@@ -215,7 +216,7 @@ class Program
          });
 
          var transformed = transformer.Transform(data);
-         spikePredictions = _mlContext.Data.CreateEnumerable<Model.SpikePrediction>(transformed, reuseRowObject: false).ToList();
+         spikePredictions = [.. _mlContext.Data.CreateEnumerable<Model.SpikePrediction>(transformed, reuseRowObject: false)];
       }
 
       var last = spikePredictions[^1].Prediction; // [alert, rawScore, mag]
