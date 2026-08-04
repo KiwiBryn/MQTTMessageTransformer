@@ -74,16 +74,16 @@ class Program
             {
                subscribedTopic.InputMessageTransformer = CSScript.Evaluator.LoadFile<IInputMessageTransformer>(subscribedTopic.InputMessageTransformFile);
 
-               switch (subscribedTopic.Type)
+               switch (subscribedTopic.ModelType)
                {
                   case ModelType.Regression:
                      subscribedTopic.OutputMessageRegressionTransformer = CSScript.Evaluator.LoadFile<IOutputMessageRegressionTransformer>(subscribedTopic.OutputMessageTransformFile);
                      break;
-                  case ModelType.Binary:
+                  case ModelType.BinaryClassification:
                      subscribedTopic.OutputMessageBinaryTransformer = CSScript.Evaluator.LoadFile<IOutputMessageBinaryTransformer>(subscribedTopic.OutputMessageTransformFile);
 
                      break;
-                  case ModelType.MultiClass:
+                  case ModelType.MultiClassClassification:
                      subscribedTopic.OutputMessageClassificationTransformer = CSScript.Evaluator.LoadFile<IOutputMessageClassificationTransformer>(subscribedTopic.OutputMessageTransformFile);
                      break;
                   default:
@@ -182,7 +182,7 @@ class Program
          return;
       }
 
-      switch (subscribedTopicSettings.Type)
+      switch (subscribedTopicSettings.ModelType)
       {
          case ModelType.Regression:
             if (subscribedTopicSettings.OutputMessageRegressionTransformer is null)
@@ -191,14 +191,14 @@ class Program
                return;
             }
             break;
-         case ModelType.Binary:
+         case ModelType.BinaryClassification:
             if (subscribedTopicSettings.OutputMessageBinaryTransformer is null)
             {
                Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No output binary transformer for topic: {subscribedTopic}");
                return;
             }
             break;
-         case ModelType.MultiClass:
+         case ModelType.MultiClassClassification:
             if (subscribedTopicSettings.OutputMessageClassificationTransformer is null)
             {
                Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No output classification transformer for topic: {subscribedTopic}");
@@ -232,20 +232,20 @@ class Program
 
          return new InferenceModel
          {
-            ModelType = settings.Type,
-            RegressionEngine = settings.Type == ModelType.Regression ? _MLContext.Model.CreatePredictionEngine<ModelInput, PredictionRegression>(model) : null,
-            BinaryEngine = settings.Type == ModelType.Binary ? _MLContext.Model.CreatePredictionEngine<ModelInput, PredictionBinary>(model) : null,
-            MultiClassEngine = settings.Type == ModelType.MultiClass ? _MLContext.Model.CreatePredictionEngine<ModelInput, PredictionMultiClass>(model) : null,
+            ModelType = settings.ModelType,
+            RegressionEngine = settings.ModelType == ModelType.Regression ? _MLContext.Model.CreatePredictionEngine<ModelInput, PredictionRegression>(model) : null,
+            BinaryEngine = settings.ModelType == ModelType.BinaryClassification ? _MLContext.Model.CreatePredictionEngine<ModelInput, PredictionBinary>(model) : null,
+            MultiClassEngine = settings.ModelType == ModelType.MultiClassClassification ? _MLContext.Model.CreatePredictionEngine<ModelInput, PredictionMultiClass>(model) : null,
          };
       })).Value;
 
       lock (_engineLocks.GetOrAdd(subscribedTopic, _ => new object()))
       {
-         switch (subscribedTopicSettings.Type)
+         switch (subscribedTopicSettings.ModelType)
          {
             case ModelType.Regression: predictionRegression = inferenceModel.RegressionEngine!.Predict(modelInput); break;
-            case ModelType.Binary: predictionBinary = inferenceModel.BinaryEngine!.Predict(modelInput); break;
-            case ModelType.MultiClass: predictionMultiClass = inferenceModel.MultiClassEngine!.Predict(modelInput); break;
+            case ModelType.BinaryClassification: predictionBinary = inferenceModel.BinaryEngine!.Predict(modelInput); break;
+            case ModelType.MultiClassClassification: predictionMultiClass = inferenceModel.MultiClassEngine!.Predict(modelInput); break;
             default: throw new NotSupportedException();
          }
       }
@@ -254,15 +254,15 @@ class Program
 
       try
       {
-         switch (subscribedTopicSettings.Type)
+         switch (subscribedTopicSettings.ModelType)
          {
             case ModelType.Regression:
                payload = subscribedTopicSettings.OutputMessageRegressionTransformer!.Transform(subscribedTopic, predictionRegression);
                break;
-            case ModelType.Binary:
+            case ModelType.BinaryClassification:
                payload = subscribedTopicSettings.OutputMessageBinaryTransformer!.Transform(subscribedTopic, predictionBinary);
                break;
-            case ModelType.MultiClass:
+            case ModelType.MultiClassClassification:
                payload = subscribedTopicSettings.OutputMessageClassificationTransformer!.Transform(subscribedTopic, predictionMultiClass);
                break;
             default:

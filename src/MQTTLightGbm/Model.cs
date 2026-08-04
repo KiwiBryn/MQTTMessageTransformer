@@ -41,8 +41,8 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
    {
       Undefined = 0,
       Regression = 1,
-      Binary = 2,
-      MultiClass = 3
+      BinaryClassification = 2,
+      MultiClassClassification = 3
    }
 
    internal class ApplicationSettings
@@ -87,6 +87,6 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
       public IOutputMessageRegressionTransformer? OutputMessageRegressionTransformer { get; set; } = null;
       public IOutputMessageClassificationTransformer? OutputMessageClassificationTransformer { get; set; } = null;
 
-      public ModelType Type { get; set; } = ModelType.Undefined;
+      public ModelType ModelType { get; set; } = ModelType.Undefined;
    }
 }
