@@ -16,8 +16,8 @@ using devMobile.IoT.MqttTransformers;
 
 public class SKU101991029 : IInputMessageTransformer
 {
-   public float Transform(string topic, byte[] payload)
+   public float[] Transform(string topic, byte[] payload)
    {
-      return 1.23f; // Placeholder: replace with actual parsing logic
+      return new float[] { 123, 1.23f, 32.1f };
    }
 }

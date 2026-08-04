@@ -28,6 +28,6 @@ public class InputSKU101991042 : IInputMessageTransformer
 
       var obj = System.Text.Json.JsonSerializer.Deserialize<SKU101991042>(json) ?? throw new InvalidOperationException("Failed to deserialize payload");
 
-      return [(float)obj.Mm, obj.Cm, obj.Temperature];
+      return new float[] { obj.Mm, obj.Cm, obj.Temperature };
    }
 }
