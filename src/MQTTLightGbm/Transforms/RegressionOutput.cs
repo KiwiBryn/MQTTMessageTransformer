@@ -7,20 +7,26 @@ using devMobile.IoT.MqttTransformer.Detection.Model;
 using devMobile.IoT.MqttTransformers;
 
 
+internal class RegressionPredictionOutput
+{
+   public string DetectionType { get; set; } = "Regression";
+   public string Topic { get; set; } = string.Empty;
+   public float Value { get; set; }
+}
+
+
 public class OutputTransformerRegression : IOutputMessageRegressionTransformer
 {
-   private static readonly JsonSerializerOptions _serializerOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
-
    public byte[] Transform(string topic, PredictionRegression predictionRegression)
    {
-      var obj = new
+      var obj = new RegressionPredictionOutput
       {
-         DetectionType = "Spike",
+         DetectionType = "Regression",
          Topic = topic,
-         Value = predictionRegression.Value,
+         Value = predictionRegression.Value
       };
 
-      string payload = JsonSerializer.Serialize(obj, _serializerOptions);
+      string payload = JsonSerializer.Serialize(obj, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
 
       return System.Text.Encoding.UTF8.GetBytes(payload);
    }
