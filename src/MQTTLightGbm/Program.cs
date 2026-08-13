@@ -32,7 +32,7 @@ class Program
 
    static async Task Main()
    {
-      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Spike detection started");
+      Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} LightGBM detection started");
 
       try
       {
@@ -67,7 +67,6 @@ class Program
          }
 #endif
 
-
          try
          {
             foreach (var subscribedTopic in _applicationSettings.SubscribedTopics.Values)
@@ -81,7 +80,6 @@ class Program
                      break;
                   case ModelType.BinaryClassification:
                      subscribedTopic.OutputMessageBinaryTransformer = CSScript.Evaluator.LoadFile<IOutputMessageBinaryTransformer>(subscribedTopic.OutputMessageTransformFile);
-
                      break;
                   case ModelType.MultiClassClassification:
                      subscribedTopic.OutputMessageClassificationTransformer = CSScript.Evaluator.LoadFile<IOutputMessageClassificationTransformer>(subscribedTopic.OutputMessageTransformFile);
@@ -243,13 +241,15 @@ class Program
       {
          switch (subscribedTopicSettings.ModelType)
          {
-            case ModelType.Regression: predictionRegression = inferenceModel.RegressionEngine!.Predict(modelInput); break;
+            case ModelType.Regression: predictionRegression = inferenceModel.RegressionEngine!.Predict(modelInput);
+               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} PredictionRegression:{predictionRegression.Value}");
+               break;
             case ModelType.BinaryClassification: predictionBinary = inferenceModel.BinaryEngine!.Predict(modelInput); break;
             case ModelType.MultiClassClassification: predictionMultiClass = inferenceModel.MultiClassEngine!.Predict(modelInput); break;
             default: throw new NotSupportedException();
          }
       }
-
+      /*
       byte[] payload;
 
       try
@@ -300,6 +300,7 @@ class Program
             return;
          }
       }
+      */
       Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.receive finish");
    }
 }

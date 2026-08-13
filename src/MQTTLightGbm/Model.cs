@@ -14,8 +14,8 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
    // and PredictionBinary classes, which contain properties for the predicted score and label.
    public class ModelInput
    {
-      [VectorType]
-      public float[] Features { get; set; } = [];
+      [VectorType(6)]
+      public float[] Features { get; set; } = new float[6];
    }
 
    public class PredictionRegression
