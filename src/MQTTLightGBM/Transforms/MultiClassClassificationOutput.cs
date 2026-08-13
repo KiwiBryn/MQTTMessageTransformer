@@ -2,9 +2,10 @@
 // Copyright (c) May 2026, devMobile Software
 //
 using System.Text.Json;
-using System.Text.Json.Serialization; // Do not remove this using directive as it is required for the JsonIgnoreCondition
-using devMobile.IoT.MqttTransformer.Detection.Model;
-using devMobile.IoT.MqttTransformers;
+using System.Text.Json.Serialization; // Do not remove these using directive as it is required 
+
+using devMobile.IoT.MqttTransFormer.LightGBM;
+using devMobile.IoT.MqttTransFormer.LightGBM.Model;
 
 
 public class OutputTransformerClassification : IOutputMessageClassificationTransformer

@@ -1,9 +1,10 @@
 ﻿//---------------------------------------------------------------------------------
 // Copyright (c) May 2026, devMobile Software
 //
-using devMobile.IoT.MqttTransformer.Detection.Model;
+using devMobile.IoT.MqttTransFormer.LightGBM.Model;
 
-namespace devMobile.IoT.MqttTransformers
+
+namespace devMobile.IoT.MqttTransFormer.LightGBM
 {
    public interface IInputMessageTransformer
    {

@@ -1,13 +1,9 @@
 ﻿//---------------------------------------------------------------------------------
 // Copyright (c) May 2026, devMobile Software
 //
-using devMobile.IoT.MqttTransformers;
 using HiveMQtt.MQTT5.Types;
-using Microsoft.ML;
-using Microsoft.ML.Data;
-using System.Collections.Concurrent;
 
-namespace devMobile.IoT.MqttTransformer.Detection.Model
+namespace devMobile.IoT.MqttTransFormer.LightGBM.Model
 {
    // These classes are used to define the input and output schema LightGBM model. The input schema is defined by the ModelInput class,
    // which contains a single property Features of type float array. The output schema is defined by the PredictionRegression, PredictionMultiClass,
@@ -15,11 +11,12 @@ namespace devMobile.IoT.MqttTransformer.Detection.Model
    public class ModelInput
    {
       [VectorType(6)]
-      public float[] Features { get; set; } = new float[6];
+      public float[] Features{ get; set; } = new float[6];
    }
 
    public class PredictionRegression
    {
+      [ColumnName("Score")]
       public float Value { get; set; }
    }
 

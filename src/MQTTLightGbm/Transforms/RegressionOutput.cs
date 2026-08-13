@@ -3,8 +3,9 @@
 //
 using System.Text.Json;
 using System.Text.Json.Serialization; // Do not remove this using directive as it is required for the JsonIgnoreCondition
-using devMobile.IoT.MqttTransformer.Detection.Model;
-using devMobile.IoT.MqttTransformers;
+
+using devMobile.IoT.MqttTransFormer.LightGBM.Model;
+using devMobile.IoT.MqttTransFormer.LightGBM;
 
 
 internal class RegressionPredictionOutput

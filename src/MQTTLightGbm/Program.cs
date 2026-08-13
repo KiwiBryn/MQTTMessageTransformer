@@ -3,17 +3,13 @@ Copyright (c) May 2026, devMobile Software
 
 */
 using CSScriptLib;
-using devMobile.IoT.MqttTransformer.Detection.Model;
-using devMobile.IoT.MqttTransformers;
+using devMobile.IoT.MqttTransFormer.LightGBM.Model;
 using HiveMQtt.Client;
 using HiveMQtt.Client.Events;
 using HiveMQtt.MQTT5.ReasonCodes;
 using HiveMQtt.MQTT5.Types;
-using Microsoft.Extensions.Configuration;
-using Microsoft.ML;
-using System.Collections.Concurrent;
 
-namespace devMobile.IoT.MqttTransformer.Detection;
+namespace devMobile.IoT.MqttTransFormer.LightGBM;
 
 
 class Program
@@ -239,7 +235,7 @@ class Program
 
       lock (_engineLocks.GetOrAdd(subscribedTopic, _ => new object()))
       {
-         switch (subscribedTopicSettings.ModelType)
+           switch (subscribedTopicSettings.ModelType)
          {
             case ModelType.Regression: predictionRegression = inferenceModel.RegressionEngine!.Predict(modelInput);
                Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} PredictionRegression:{predictionRegression.Value}");
@@ -249,7 +245,7 @@ class Program
             default: throw new NotSupportedException();
          }
       }
-      /*
+
       byte[] payload;
 
       try
@@ -300,7 +296,7 @@ class Program
             return;
          }
       }
-      */
+
       Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.receive finish");
    }
 }

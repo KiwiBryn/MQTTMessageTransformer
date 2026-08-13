@@ -10,9 +10,8 @@
 "hourCos":0.976296,
 "soilMoisture":39.60148
 */
-using System; // Donot remove this as required for InvalidOperationException
-
-using devMobile.IoT.MqttTransformers;
+using System; // DO NOT remove this as required for InvalidOperationException
+using devMobile.IoT.MqttTransFormer.LightGBM;
 
 internal class SKU12345
 {
@@ -33,8 +32,6 @@ public class InputTransformerRegression : IInputMessageTransformer
 
       var obj = System.Text.Json.JsonSerializer.Deserialize<SKU12345>(json) ?? throw new InvalidOperationException("Failed to deserialize payload");
 
-      //return new float[] { obj.temp, obj.humidity, obj.par, obj.hourSin, obj.hourCos, obj.soilMoisture };
-
-      return new float[] { 10.395078f, 84.45233f, 0f, 0.21643962f, 0.976296f, 39.60148f };
+      return new float[] { obj.temp, obj.humidity, obj.par, obj.hourSin, obj.hourCos, obj.soilMoisture };
    }
 }
