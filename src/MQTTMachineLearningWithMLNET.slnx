@@ -8,13 +8,12 @@
   <Project Path="LightGBMDataGenerator/LightGBMDataGenerator.csproj" Id="502db263-74c1-404e-ab25-f68690565805" />
   <Project Path="LightGBMMultiClassClassificationTrainer/LightGBMMultiClassClassificationTrainer.csproj" Id="312f6b1d-aca8-4be9-ad35-5a7858163cd2" />
   <Project Path="LightGBMRegressionTrainer/LightGBMRegressionTrainer.csproj" Id="bbbf6e00-1b69-4fb2-ae00-530ca48a67d7" />
-  <Project Path="LightGBMTrainer/LightGBMTrainer.csproj" Id="0cc5f37e-8295-4737-9fa8-a1b93390510c" />
   <Project Path="MQTTChangePointDetection/MQTTChangePointDetection.csproj" />
   <Project Path="MQTTCLientCodeLoopback/MQTTCLientCodeLoopback.csproj" Id="631e6dcd-a635-4d0e-a6ea-302f56f1f704" />
   <Project Path="MQTTClientCSScriptDynamicLoadingLoopback/MQTTClientCSScriptDynamicLoadingLoopback.csproj" Id="3ed7de4f-cfc1-46ba-855c-7e267e39c41c" />
   <Project Path="MQTTClientCSScriptLoopback/MQTTClientCSScriptLoopback.csproj" Id="4ec2ca77-a732-4ce8-96f7-2b3cd785d748" />
   <Project Path="MQTTLightGbm/MQTTLightGBM.csproj" Id="dc6d5536-297b-455f-93d0-4dd30ed3d3a2" />
-  <Project Path="MQTTLightGBMDeviceSimulator/MQTTLightGBMDeviceSimulator.csproj" Id="46330f3c-3fb8-4465-a32e-91420c3be254" />
+  <Project Path="MQTTDeviceSimulator/MQTTDeviceSimulator.csproj" Id="46330f3c-3fb8-4465-a32e-91420c3be254" />
   <Project Path="MQTTLivenessMonitor/MQTTLivenessMonitor.csproj" Id="f09a4c9f-94e5-4570-9f92-99f71aaf2ee1" />
   <Project Path="MQTTSpikeDetection/MQTTSpikeDetection.csproj" Id="85302985-e744-4dae-8771-eec5c5b3e171" />
   <Project Path="MQTTSRCNNSpikeDetection/MQTTSRCNNSpikeDetection.csproj" Id="c2964c26-b5b3-4da3-8cb0-5aa0571c60d7" />
