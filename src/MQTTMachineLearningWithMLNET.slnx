@@ -5,7 +5,7 @@
   <Project Path="HiveMQClient/HiveMQClient.csproj" Id="3bc6b9e5-31c1-4a85-9abf-9ee614a1922b" />
   <Project Path="IMessageTransformer/IMessageTransformer.csproj" Id="0c69430e-8455-45a5-9506-0c439dae57d2" />
   <Project Path="LightGBMBinaryClassificationTrainer/LightGBMBinaryClassificationTrainer.csproj" Id="d7af12be-c4b7-4722-b472-0c45be4ccd11" />
-  <Project Path="LightGBMDataGenerator/LightGBMDataGenerator.csproj" Id="502db263-74c1-404e-ab25-f68690565805" />
+  <Project Path="LightGBMDataGenerator/LightGBMDataGeneratorEvT.csproj" Id="502db263-74c1-404e-ab25-f68690565805" />
   <Project Path="LightGBMMultiClassClassificationTrainer/LightGBMMultiClassClassificationTrainer.csproj" Id="312f6b1d-aca8-4be9-ad35-5a7858163cd2" />
   <Project Path="LightGBMRegressionTrainer/LightGBMRegressionTrainer.csproj" Id="bbbf6e00-1b69-4fb2-ae00-530ca48a67d7" />
   <Project Path="MQTTChangePointDetection/MQTTChangePointDetection.csproj" />
