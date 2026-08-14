@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LightGBMDataGenerator": {
+      "commandName": "Project",
+      "commandLineArgs": "Output24M.csv LightGBMRegression.zip"
+    }
+  }
+}
