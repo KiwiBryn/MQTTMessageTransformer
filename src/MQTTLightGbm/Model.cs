@@ -10,8 +10,8 @@ namespace devMobile.IoT.MqttTransFormer.LightGBM.Model
    // and PredictionBinary classes, which contain properties for the predicted score and label.
    public class ModelInput
    {
-      [VectorType(6)]
-      public float[] Features{ get; set; } = new float[6];
+      [VectorType]
+      public float[]? Features{get; set; }
    }
 
    public class PredictionRegression
@@ -85,5 +85,7 @@ namespace devMobile.IoT.MqttTransFormer.LightGBM.Model
       public IOutputMessageClassificationTransformer? OutputMessageClassificationTransformer { get; set; } = null;
 
       public ModelType ModelType { get; set; } = ModelType.Undefined;
+
+      public bool ShowFeatureValues { get; set; } = false;
    }
 }
