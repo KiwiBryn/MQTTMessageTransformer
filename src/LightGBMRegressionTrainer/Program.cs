@@ -23,11 +23,23 @@ class Program
    {
       Console.WriteLine("Training LightGBM regression model...");
 
+      if (args.Length != 2)
+      {
+         Console.WriteLine("Usage: LightGBMRegressionTrainer [input.csv] [output_model.zip]");
+         return;
+      }
+
+      if (!System.IO.File.Exists(args[0]))
+      {
+         Console.WriteLine($"CSV file not found. Please ensure '{args[0]}' is in the application directory.");
+         return;
+      }
+
       var ml = new MLContext(seed: 42);
 
       // Load CSV
       var data = ml.Data.LoadFromTextFile<ModelInput>(
-          path: "sensor_full.csv",
+          path: args[0],
           hasHeader: true,
           separatorChar: ',');
 
@@ -49,8 +61,9 @@ class Program
       Console.WriteLine($"RMSE: {metrics.RootMeanSquaredError}");
 
       // Save model
-      ml.Model.Save(model, split.TrainSet.Schema, "regression_model.zip");
+      ml.Model.Save(model, split.TrainSet.Schema, args[1]);
 
-      Console.WriteLine("Model training complete.");
+      Console.WriteLine("Model training complete. Press <enter> to exit.");
+      Console.ReadLine();
    }
 }

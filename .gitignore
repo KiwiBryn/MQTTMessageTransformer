@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /src/NFMQTTUltrasonicRanger/Secrets.cs
 /src/HiveMQClient/.claude/worktrees
+/src/LightGBMRegressionTrainer/Output24M.csv
