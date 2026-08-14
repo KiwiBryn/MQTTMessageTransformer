@@ -1,14 +1,5 @@
-﻿using HiveMQtt.Client;
-using HiveMQtt.Client.Options;
-using HiveMQtt.MQTT5.ReasonCodes;
-using Microsoft.Extensions.Configuration;
-using System;
-using System.IO;
-using System.Reflection.PortableExecutable;
-using System.Text.Json;
-using System.Threading.Tasks;
-
-
+﻿// Copyright (c) August 2026, devMobile Software
+// 
 namespace devMobile.IoT.MQTTLightGBMDeviceSimulator;
 
 class Program

@@ -22,6 +22,17 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Output24M.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="HiveMQtt.Client" />
+    <Using Include="HiveMQtt.MQTT5.ReasonCodes" />
+    <Using Include="HiveMQtt.MQTT5.Types" />
+    <Using Include="Microsoft.Extensions.Configuration" />
+    <Using Include="System.Text.Json" />
   </ItemGroup>
 
 </Project>
