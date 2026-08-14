@@ -20,11 +20,8 @@ class Program
    // ML.NET context and per-topic state
    private static readonly MLContext _MLContext = new();
 
-   // one engine per topic; keeps rolling state for IID detector
-   private static readonly ConcurrentDictionary<string, Lazy<InferenceModel>> _lightGbmEngines = new();
-
-   // lock per topic because _lightGbmEngines is not thread-safe
-   private static readonly ConcurrentDictionary<string, object> _engineLocks = new();
+   // One predictor per topic, built eagerly at startup (all-or-nothing).
+   private static readonly ConcurrentDictionary<string, ITopicPredictor> _predictors = new();
 
    static async Task Main()
    {
@@ -59,35 +56,46 @@ class Program
 #if HIVEMQ_CERTIFICATE_SUPPORT
          if (!string.IsNullOrWhiteSpace(_applicationSettings.ClientCertificateFileName))
          {
-            optionsBuilder.WithClientCertificate(_applicationSettings.ClientCertificateFileName,_applicationSettings.ClientCertificatePassword);
+            optionsBuilder.WithClientCertificate(_applicationSettings.ClientCertificateFileName, _applicationSettings.ClientCertificatePassword);
          }
 #endif
 
+         // Eagerly load transformer scripts + prediction engines per topic.
+         // All-or-nothing: any failure aborts startup before we subscribe.
          try
          {
-            foreach (var subscribedTopic in _applicationSettings.SubscribedTopics.Values)
+            foreach (var (topicName, cfg) in _applicationSettings.SubscribedTopics)
             {
-               subscribedTopic.InputMessageTransformer = CSScript.Evaluator.LoadFile<IInputMessageTransformer>(subscribedTopic.InputMessageTransformFile);
+               cfg.InputMessageTransformer = CSScript.Evaluator
+                  .LoadFile<IInputMessageTransformer>(cfg.InputMessageTransformFile);
 
-               switch (subscribedTopic.ModelType)
+               switch (cfg.ModelType)
                {
                   case ModelType.Regression:
-                     subscribedTopic.OutputMessageRegressionTransformer = CSScript.Evaluator.LoadFile<IOutputMessageRegressionTransformer>(subscribedTopic.OutputMessageTransformFile);
+                     cfg.OutputMessageRegressionTransformer = CSScript.Evaluator
+                        .LoadFile<IOutputMessageRegressionTransformer>(cfg.OutputMessageTransformFile);
                      break;
                   case ModelType.BinaryClassification:
-                     subscribedTopic.OutputMessageBinaryTransformer = CSScript.Evaluator.LoadFile<IOutputMessageBinaryTransformer>(subscribedTopic.OutputMessageTransformFile);
+                     cfg.OutputMessageBinaryTransformer = CSScript.Evaluator
+                        .LoadFile<IOutputMessageBinaryTransformer>(cfg.OutputMessageTransformFile);
                      break;
                   case ModelType.MultiClassClassification:
-                     subscribedTopic.OutputMessageClassificationTransformer = CSScript.Evaluator.LoadFile<IOutputMessageClassificationTransformer>(subscribedTopic.OutputMessageTransformFile);
+                     cfg.OutputMessageClassificationTransformer = CSScript.Evaluator
+                        .LoadFile<IOutputMessageClassificationTransformer>(cfg.OutputMessageTransformFile);
                      break;
                   default:
-                     throw new NotSupportedException();
+                     throw new NotSupportedException($"ModelType '{cfg.ModelType}' not supported for topic '{topicName}'.");
                }
+
+               _predictors[topicName] = PredictorFactory.Create(_MLContext, cfg);
+
+               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss}   Loaded topic '{topicName}' " +
+                                 $"({cfg.ModelType}, model='{Path.GetFileName(cfg.ModelFileName)}')");
             }
          }
          catch (Exception ex)
          {
-            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Failed to load message transformer scripts: {ex.Message}");
+            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Failed to load topics: {ex.Message}");
             throw;
          }
 
@@ -170,43 +178,19 @@ class Program
          return;
       }
 
-      if (!_applicationSettings.SubscribedTopics.TryGetValue(subscribedTopic, out var subscribedTopicSettings))
+      if (!_applicationSettings.SubscribedTopics.TryGetValue(subscribedTopic, out var subscribedTopicSettings) ||
+          !_predictors.TryGetValue(subscribedTopic, out var predictor))
       {
          Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} no topic match:{subscribedTopic}");
          return;
       }
 
-      switch (subscribedTopicSettings.ModelType)
-      {
-         case ModelType.Regression:
-            if (subscribedTopicSettings.OutputMessageRegressionTransformer is null)
-            {
-               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No output regression transformer for topic: {subscribedTopic}");
-               return;
-            }
-            break;
-         case ModelType.BinaryClassification:
-            if (subscribedTopicSettings.OutputMessageBinaryTransformer is null)
-            {
-               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No output binary transformer for topic: {subscribedTopic}");
-               return;
-            }
-            break;
-         case ModelType.MultiClassClassification:
-            if (subscribedTopicSettings.OutputMessageClassificationTransformer is null)
-            {
-               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} No output classification transformer for topic: {subscribedTopic}");
-               return;
-            }
-            break;
-         default:
-            throw new NotSupportedException();
-      }
-
+      // 1. Input transform (bytes → feature vector)
       ModelInput modelInput = new ModelInput();
       try
       {
-         modelInput.Features = subscribedTopicSettings.InputMessageTransformer.Transform(subscribedTopic, e.PublishMessage.Payload);
+         modelInput.Features = subscribedTopicSettings.InputMessageTransformer!
+            .Transform(subscribedTopic, e.PublishMessage.Payload);
       }
       catch (Exception ex)
       {
@@ -214,64 +198,28 @@ class Program
          return;
       }
 
-      PredictionRegression predictionRegression = null!;
-      PredictionBinary predictionBinary = null!;
-      PredictionMultiClass predictionMultiClass = null!;
-
-      InferenceModel inferenceModel = _lightGbmEngines.GetOrAdd(subscribedTopic, key => new Lazy<InferenceModel>(() =>
+      if (subscribedTopicSettings.ShowFeatureValues)
       {
-         var settings = _applicationSettings.SubscribedTopics[key];
-         using var fs = File.OpenRead(settings.ModelFileName);
-         var model = _MLContext.Model.Load(fs, out _);
-
-         return new InferenceModel
+         foreach (var feature in modelInput.Features!)
          {
-            ModelType = settings.ModelType,
-            RegressionEngine = settings.ModelType == ModelType.Regression ? _MLContext.Model.CreatePredictionEngine<ModelInput, PredictionRegression>(model) : null,
-            BinaryEngine = settings.ModelType == ModelType.BinaryClassification ? _MLContext.Model.CreatePredictionEngine<ModelInput, PredictionBinary>(model) : null,
-            MultiClassEngine = settings.ModelType == ModelType.MultiClassClassification ? _MLContext.Model.CreatePredictionEngine<ModelInput, PredictionMultiClass>(model) : null,
-         };
-      })).Value;
-
-      lock (_engineLocks.GetOrAdd(subscribedTopic, _ => new object()))
-      {
-           switch (subscribedTopicSettings.ModelType)
-         {
-            case ModelType.Regression: predictionRegression = inferenceModel.RegressionEngine!.Predict(modelInput);
-               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} PredictionRegression:{predictionRegression.Value}");
-               break;
-            case ModelType.BinaryClassification: predictionBinary = inferenceModel.BinaryEngine!.Predict(modelInput); break;
-            case ModelType.MultiClassClassification: predictionMultiClass = inferenceModel.MultiClassEngine!.Predict(modelInput); break;
-            default: throw new NotSupportedException();
+            Console.Write($"{feature} ");
          }
+         Console.WriteLine();
       }
 
+      // 2. Predict + output transform (single call, strategy-owned lock)
       byte[] payload;
-
       try
       {
-         switch (subscribedTopicSettings.ModelType)
-         {
-            case ModelType.Regression:
-               payload = subscribedTopicSettings.OutputMessageRegressionTransformer!.Transform(subscribedTopic, predictionRegression);
-               break;
-            case ModelType.BinaryClassification:
-               payload = subscribedTopicSettings.OutputMessageBinaryTransformer!.Transform(subscribedTopic, predictionBinary);
-               break;
-            case ModelType.MultiClassClassification:
-               payload = subscribedTopicSettings.OutputMessageClassificationTransformer!.Transform(subscribedTopic, predictionMultiClass);
-               break;
-            default:
-               throw new NotSupportedException();
-         }
-
+         payload = predictor.PredictAndTransform(subscribedTopic, modelInput);
       }
       catch (Exception ex)
       {
-         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Output transform failed: {ex.Message}");
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Predict/output transform failed: {ex.Message}");
          return;
       }
 
+      // 3. Publish
       string[] topics = subscribedTopicSettings.OutputTopic.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
       foreach (string topic in topics)
@@ -299,15 +247,4 @@ class Program
 
       Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.receive finish");
    }
-}
-
-public class InferenceModel
-{
-   public required ModelType ModelType { get; init; }
-
-   public PredictionEngine<ModelInput, PredictionRegression>? RegressionEngine { get; init; }
-
-   public PredictionEngine<ModelInput, PredictionBinary>? BinaryEngine { get; init; }
-
-   public PredictionEngine<ModelInput, PredictionMultiClass>? MultiClassEngine { get; init; }
 }
