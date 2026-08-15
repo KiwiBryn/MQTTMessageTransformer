@@ -97,8 +97,18 @@ MQTT Publisher
 
 ## Warning
 * These projects are intended as experiments and learning exercises.
-* Samples may be updated as the Mistral AI APIs evolve.
 * Error handling, security, and production readiness may vary between PoCs.
+
+## Background
+* [Message Transformation in code with HiveMQ Client](https://blog.devmobile.co.nz/2026/02/01/message-transformation-in-code-with-hivemq-client/)
+
+* [Message Transformation with cached transform binaries](https://blog.devmobile.co.nz/2026/03/17/message-transformation-with-cached-transform-binaries/)
+
+* [Real-time IoT Spike and Change Point Detection with ML.NET](https://blog.devmobile.co.nz/2026/05/27/real-time-iot-spike-and-change-point-detection-with-ml-net/)
+
+* [Real-time IoT Change Point Detection with ML.NET](https://blog.devmobile.co.nz/2026/06/16/real-time-iot-change-point-detection-with-ml-net/)
+
+* [Real-time Spike Detection with SR-CNN](https://blog.devmobile.co.nz/2026/08/15/real-time-spike-detection-with-sr-cnn/)
 
 ## License
 
