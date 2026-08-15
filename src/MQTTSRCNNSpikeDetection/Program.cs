@@ -14,11 +14,7 @@ class Program
 
    private static MLContext _mlContext = new ();
 
-   private static readonly ConcurrentDictionary<string, Queue<Model.TimeSeriesData>> _buffers = new();
-
-   // lock per topic to serialise Queue<T> mutation and the SR-CNN Fit/Transform over the buffer
-   private static readonly ConcurrentDictionary<string, object> _engineLocks = new();
-   private static readonly ConcurrentDictionary<string, ITransformer> _transformers = new();
+   private static readonly ConcurrentDictionary<string, TopicRuntime> _TopicEstimators = new();
 
    static async Task Main()
    {
@@ -177,31 +173,23 @@ class Program
          return;
       }
 
-      // Give SR-CNN enough trailing context so LookaheadWindowSize is meaningful for the newest sample.
-      int maxBufferSize = subscribedTopicSettings.SrCnnSettings.WindowSize
-                        + subscribedTopicSettings.SrCnnSettings.LookaheadWindowSize
-                        + subscribedTopicSettings.SrCnnSettings.BackAddWindowSize;
+      var topicEstimator = _TopicEstimators.GetOrAdd(subscribedTopic, key => new TopicRuntime(_applicationSettings.SubscribedTopics[key]));
 
       List<Model.SpikePrediction> spikePredictions;
-      var engineLock = _engineLocks.GetOrAdd(subscribedTopic, _ => new object());
-
-
-      var buffer = _buffers.GetOrAdd(subscribedTopic, _ => new Queue<Model.TimeSeriesData>(maxBufferSize));
-
-      lock (engineLock)
+      lock (topicEstimator.Lock)
       {
-         buffer.Enqueue(new Model.TimeSeriesData { Value = value });
-         while (buffer.Count > maxBufferSize) buffer.Dequeue();
+         topicEstimator.Buffer.Enqueue(new Model.TimeSeriesData { Value = value });
+         while (topicEstimator.Buffer.Count > topicEstimator.MaxBufferSize) topicEstimator.Buffer.Dequeue();
 
-         if (buffer.Count < subscribedTopicSettings.SrCnnSettings.WindowSize)
+         if (topicEstimator.Buffer.Count < subscribedTopicSettings.SrCnnSettings.WindowSize)
          {
-            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Not enough data for prediction (have {buffer.Count}, need {subscribedTopicSettings.SrCnnSettings.WindowSize})");
+            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Not enough data for prediction (have {topicEstimator.Buffer.Count}, need {subscribedTopicSettings.SrCnnSettings.WindowSize})");
             return;
          }
 
-         var data = _mlContext.Data.LoadFromEnumerable(buffer);
+         var data = _mlContext.Data.LoadFromEnumerable(topicEstimator.Buffer);
 
-         var transformer = _transformers.GetOrAdd(subscribedTopic, _ =>
+         if (topicEstimator.Transformer is null)
          {
             var estimator = _mlContext.Transforms.DetectAnomalyBySrCnn(
                outputColumnName: nameof(Model.SpikePrediction.Prediction),
@@ -212,10 +200,10 @@ class Program
                averagingWindowSize: subscribedTopicSettings.SrCnnSettings.AveragingWindowSize,
                judgementWindowSize: subscribedTopicSettings.SrCnnSettings.JudgementWindowSize,
                threshold: subscribedTopicSettings.SrCnnSettings.Threshold);
-            return estimator.Fit(data);
-         });
+            topicEstimator.Transformer = estimator.Fit(data);
+         }
 
-         var transformed = transformer.Transform(data);
+         var transformed = topicEstimator.Transformer.Transform(data);
          spikePredictions = [.. _mlContext.Data.CreateEnumerable<Model.SpikePrediction>(transformed, reuseRowObject: false)];
       }
 
@@ -260,5 +248,20 @@ class Program
          }
       }
       Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} HiveMQ.receive finish");
+   }
+
+   private sealed class TopicRuntime
+   {
+      public object Lock { get; } = new();
+      public Queue<Model.TimeSeriesData> Buffer { get; }
+      public int MaxBufferSize { get; }
+      public ITransformer? Transformer { get; set; }
+
+      public TopicRuntime(Model.TopicConfiguration configuration)
+      {
+         MaxBufferSize = configuration.SrCnnSettings.WindowSize+ configuration.SrCnnSettings.LookaheadWindowSize+ configuration.SrCnnSettings.BackAddWindowSize;
+
+         Buffer = new Queue<Model.TimeSeriesData>(MaxBufferSize);
+      }
    }
 }
