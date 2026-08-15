@@ -21,12 +21,21 @@ The repository contains several sample projects focused on different MQTT proces
 src/
 ├── HiveMQClient/
 ├── IMessageTransformer/
+├── LightGBMBinaryClassificationTrainer/
+├── LightGBMDataGeneratorEvT/
+├── LightGBMMultiClassClassificationTrainer/
+├── LightGBMRegressionTrainer/
+├── MQTTChangePointDetection/
 ├── MQTTCLientCodeLoopback/
 ├── MQTTChangePointDetection/
+├── MQTTCLientCodeLoopback/
 ├── MQTTClientCSScriptDynamicLoadingLoopback/
 ├── MQTTClientCSScriptLoopback/
+├── MQTTDeviceSimulator/
+├── MQTTLightGBM/
 ├── MQTTLivenessMonitor/
 ├── MQTTSpikeDetection/
+├── MQTTSRCNNSpikeDetection/
 ├── NFMQTTUltrasonicRanger/
 └── MQTTMachineLearningWithMLNET.slnx
 ```
