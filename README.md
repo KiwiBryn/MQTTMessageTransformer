@@ -110,6 +110,14 @@ MQTT Publisher
 
 * [Real-time Spike Detection with SR-CNN](https://blog.devmobile.co.nz/2026/08/15/real-time-spike-detection-with-sr-cnn/)
 
+* [Real-time ML.Net Regression with LightGBM]
+
+* [Real-time ML.Net Binary classification with LightGBM]
+
+* [Real-time ML.Met Multi class classification with LightGBM]
+
+The MQTT examples should be considered as "snappy" rather than "real-time" as embedded/edge compute "real-time" is different often with specified values for up-time, duration, latency and jitter.
+
 ## License
 
 MIT License
