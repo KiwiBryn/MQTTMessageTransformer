@@ -110,13 +110,23 @@ MQTT Publisher
 
 * [Real-time Spike Detection with SR-CNN](https://blog.devmobile.co.nz/2026/08/15/real-time-spike-detection-with-sr-cnn/)
 
-* [Real-time ML.Net Regression with LightGBM]
+* [nanoFramework RS485 Light Intensity Sensor](https://blog.devmobile.co.nz/2026/02/02/nanoframework-rs485-light-intensity-sensor/)
+  
+* [nanoFramework RS485 Temperature, Humidity & Dewpoint Sensor](https://blog.devmobile.co.nz/2026/01/23/nanoframework-rs485-temperature-humidity-dewpoint-sensor/)
 
-* [Real-time ML.Net Binary classification with LightGBM]
+* [nanoFramework RS485 Temperature, Humidity & CO2 Sensor](https://blog.devmobile.co.nz/2025/12/23/nanoframework-rs485-temperature-humidity-co2-sensor/)
 
-* [Real-time ML.Met Multi class classification with LightGBM]
+* [nanoFramework RS485 500cm Ultrasonic Level Sensor](https://blog.devmobile.co.nz/2025/12/20/nanoframework-rs485-500cm-ultrasonic-level-sensor/)
 
-The MQTT examples should be considered as "snappy" rather than "real-time" as embedded/edge compute "real-time" is different often with specified values for up-time, duration, latency and jitter.
+Blog posts will be published once I build a couple more nanoFramework apps to collect some training data 
+* 
+* Real-time ML.Net Regression with LightGBM 
+
+* Real-time ML.Net Binary classification with LightGBM
+
+* Real-time ML.Met Multi class classification with LightGBM 
+
+The MQTT examples should be considered as "snappy" rather than "real-time". For embedded/edge compute "real-time" is different often with specified values for up-time, duration, latency and jitter.
 
 ## License
 
